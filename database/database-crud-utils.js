@@ -1,69 +1,55 @@
-import { ObjectId } from "mongodb";
 import dbClient from "./database.js";
-import { DATABASE, COLLECTION } from "./database-collection-constants.js";
+import { DATABASE } from "./database-collection-constants.js";
 
 // START OF USERS CRUD OPERATIONS
 
 async function getUserById(_id, opts = {}) {
   try {
-    await dbClient.connect();
-    const user = await dbClient
-      .db(DATABASE.DEXA_CORE)
-      .collection(COLLECTION.USERS)
-      .findOne({ _id: new ObjectId(_id) });
-    if (user && !opts.includePassword) {
-      delete user.password;
+    const query = {
+      "selector": {_id},
+      "fields": ["_id", "name", "email", "role", "orgId", "dateOfBirth", "location", "pincode", ...(opts.includePassword ? ["password"] : [])]
     }
-    if (user.role === "orgAdmin") {
-      const organizationInfo = await getOrganizationById(user.orgId);
-      if (organizationInfo) {
-        user.orgInfo = organizationInfo;
+    const users = await dbClient.mango(DATABASE.USERS, query);
+    const user = users.data.docs?.[0];
+    if (user?.role === "orgAdmin") {
+      const orgQuery = {
+        "selector": {"_id": user.orgId},
+        "fields": ["_id", "name"]
+      }
+      const organization = await dbClient.mango(DATABASE.ORGANIZATIONS, orgQuery);
+      if (organization.data.docs?.[0]) {
+        user.orgInfo = organization.data.docs[0];
       }
     }
+    console.log(user);
     return user;
   } catch (error) {
     console.error("Error while fetching user\n", error);
-  } finally {
-    await dbClient.close();
-  }
-}
-export async function getExamsByOrgId(orgId, opts = {}) {
-  try {
-    await dbClient.connect();
-    const exams = await dbClient
-      .db(DATABASE.DEXA_CORE)
-      .collection(COLLECTION.EXAMS)
-      .find(opts.query) // Match documents with the specified orgId
-      .sort({ createdAt: 1 }) // Sort by createdAt in ascending order (use -1 for descending)
-      .toArray();
-    return exams;
-  } catch (error) {
-  } finally {
-    await dbClient.close();
   }
 }
 
 async function getUserByEmail(email, opts = {}) {
   try {
-    await dbClient.connect();
-    const user = await dbClient
-      .db(DATABASE.DEXA_CORE)
-      .collection(COLLECTION.USERS)
-      .findOne({ email });
-    if (user && !opts.includePassword) {
-      delete user.password;
+    const query = {
+      "selector": {email},
+      "fields": ["_id", "name", "email", "role", "orgId", "dateOfBirth", "location", "pincode", ...(opts.includePassword ? ["password"] : [])]
     }
-    if (user.role === "orgAdmin") {
-      const organizationInfo = await getOrganizationById(user.orgId);
-      if (organizationInfo) {
-        user.orgInfo = organizationInfo;
+    const users = await dbClient.mango(DATABASE.USERS, query);
+    const user = users.data.docs?.[0];
+    if (user?.role === "orgAdmin") {
+      const orgQuery = {
+        "selector": {"_id": user.orgId},
+        "fields": ["_id", "name"]
+      }
+      const organization = await dbClient.mango(DATABASE.ORGANIZATIONS, orgQuery);
+      if (organization.data.docs?.[0]) {
+        user.orgInfo = organization.data.docs[0];
       }
     }
+    console.log(user);
     return user;
   } catch (error) {
     console.error("Error while fetching user\n", error);
-  } finally {
-    await dbClient.close();
   }
 }
 
@@ -74,16 +60,10 @@ async function isValidUser(uid) {
 
 async function createUser(userInfo) {
   try {
-    await dbClient.connect();
-    const result = await dbClient
-      .db(DATABASE.DEXA_CORE)
-      .collection(COLLECTION.USERS)
-      .insertOne(userInfo);
-    return result;
+    const user = await dbClient.insert(DATABASE.USERS, userInfo);
+    return {_id: user.data.id, ...userInfo};
   } catch (error) {
     console.error("Error while creating user\n", error);
-  } finally {
-    await dbClient.close();
   }
 }
 
@@ -93,16 +73,16 @@ async function createUser(userInfo) {
 
 async function getOrganizationById(_id) {
   try {
-    await dbClient.connect();
-    const organization = await dbClient
-      .db(DATABASE.DEXA_CORE)
-      .collection(COLLECTION.ORGANIZATIONS)
-      .findOne({ _id: new ObjectId(_id) });
-    return organization;
+    const query = {
+      "selector": {_id},
+      "fields": ["_id", "name"]
+    }
+    const collections = await dbClient.mango(DATABASE.ORGANIZATIONS, query);
+    const collection = collections.data.docs?.[0];
+    console.log(collection);
+    return collection;
   } catch (error) {
     console.error("Error while fetching organization\n", error);
-  } finally {
-    await dbClient.close();
   }
 }
 
@@ -112,16 +92,43 @@ async function getOrganizationById(_id) {
 
 async function createExam(examInfo) {
   try {
-    await dbClient.connect();
-    const result = await dbClient
-      .db(DATABASE.DEXA_CORE)
-      .collection(COLLECTION.EXAMS)
-      .insertOne(examInfo);
-    return result;
+    const exam = await dbClient.insert(DATABASE.EXAMS, examInfo);
+    return {_id: exam.data.id, ...examInfo};
   } catch (error) {
     console.error("Error while creating exam\n", error);
-  } finally {
-    await dbClient.close();
+  }
+}
+
+export async function getExamsByOrgId(orgId, opts = {}) {
+  try {
+    const query = {
+      "selector": {orgId},
+      "fields": [
+        "_id",
+        "orgId",
+        "orgAdminId",
+        "name",
+        "description",
+        "instructions",
+        "startTime",
+        "duration",
+        "passPercentage",
+        "numberOfQuestions",
+        "status",
+        "qbStoreId",
+        "createdAt"
+      ]
+    }
+    const _exams = await dbClient.mango(DATABASE.EXAMS, query);
+    const exams = [];
+    _exams?.data?.docs?.forEach(async (exam) => {
+      exam.orgAdminInfo = await getUserById(exam.orgAdminId);
+      exam.orgInfo = await getOrganizationById(exam.orgId);
+    })
+    console.log(exams);
+    return exams;
+  } catch (error) {
+    console.error("Error while fetching exams\n", error);
   }
 }
 
