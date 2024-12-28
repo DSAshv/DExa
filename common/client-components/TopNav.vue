@@ -31,7 +31,7 @@ function handleLogout() {
         .then((response) => {
             showInfoMsg(response.data.message, response.result);
             if (response.result === API_RESPONSE.SUCCESS) {
-                redirect("/", { timeout: 3000 });
+                redirect("/", { timeout: 1500 });
             }
         }).catch(() => {
             isLogoutInProgress.value = false;

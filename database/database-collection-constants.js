@@ -1,7 +1,8 @@
 const DATABASE = {
     USERS: "users",
     ORGANIZATIONS: "organizations",
-    EXAMS: "exams"
+    EXAMS: "exams",
+    REGISTRATIONS: "registrations",
 };
 
 const DATABASE_LIST = Object.values(DATABASE);

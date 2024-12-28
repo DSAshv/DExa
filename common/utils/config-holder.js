@@ -46,7 +46,7 @@ class ConfigHolder {
   }
 
   static get isStudent() {
-    return config.userInfo?.role === "student" || Boolean(this.id);
+    return config.userInfo?.role === "student";
   }
 
   static get isOrgAdmin() {

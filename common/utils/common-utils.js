@@ -24,8 +24,8 @@ function showInfoMsg(msg, type, opts = {}) {
             if (opts.reloadOnTimeout) {
                 window.location.reload();
             }
-        }, 500); // Duration of fade-out animation
-    }, 3000);
+        }, 250); // Duration of fade-out animation
+    }, 1500);
     if (opts.forceReload) {
         window.location.reload();
     }

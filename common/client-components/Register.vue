@@ -62,7 +62,7 @@ const handleRegister = async() => {
         ).then(response => {
             showInfoMsg(response.data.message, response.result);
             if (response.result === API_RESPONSE.SUCCESS) {
-                redirect("/dashboard", { timeout: 3000 });
+                redirect("/dashboard", { timeout: 1500 });
             } else {
                 isRegisterInProgress.value = false;
             }

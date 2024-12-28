@@ -13,7 +13,7 @@ import dbClient from "../../database/database-crud-utils.js";
 import { parse } from "csv-parse";
 import { Readable } from "stream";
 import { addQbToIpfs } from "../../common/server/ipfs.js";
-
+import pdf from "pdfkit";
 
 const router = express.Router();
 
@@ -49,28 +49,216 @@ router.post("/exams", async (request, response) => {
           "status": {
             "$in": [EXAM_STATUS.APPLICATION_OPEN, EXAM_STATUS.EXAM_SCHEDULED, EXAM_STATUS.EXAM_LIVE]
           }
-        }
+        },
       };
       if (userInfo.role === USER_ROLES.ORGADMIN) {
-        query.selector.orgId = userInfo.orgId.toString();
+        query.selector.orgId = userInfo.orgId;
       }
-    }
+      let examList = await dbClient.getAllExams(userInfo, { query });
+      return response.status(200).json({
+        result: API_RESPONSE.SUCCESS,
+        data: {
+          message: "Exams fetched succesfully ",
+          exams: examList,
+        },
+      });
+    } else if (mode === "register") {
+      const { examId } = request.body;
+      if (!examId) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Register Exam failed - Exam ID missing",
+          },
+        });
+      }
 
-    let examList = await dbClient.getAllExams({ query });
-    return response.status(200).json({
-      result: API_RESPONSE.SUCCESS,
-      data: {
-        message: "Exams fetched succesfully ",
-        exams: examList,
-      },
-    });
+      const examInfo = await dbClient.getExamById(examId, { userInfo });
+      if (!examInfo) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Register Exam failed - Exam not found",
+          },
+        });
+      }
+
+      const isUserRegisteredForExam = await dbClient.isUserRegisteredForExam(examId, userInfo._id);
+      if (isUserRegisteredForExam) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Register Exam failed - User already registered for exam",
+          },
+        });
+      }
+
+      if (examInfo.status !== EXAM_STATUS.APPLICATION_OPEN) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Register Exam failed - Exam is not open for registration",
+          },
+        });
+      }
+
+      const registrationInfo = await dbClient.createExamRegistration({
+        examId,
+        studentId: userInfo._id,
+        createdAt: String(Date.now()),
+      });
+
+      if (registrationInfo) {
+        return response.status(200).json({
+          result: API_RESPONSE.SUCCESS,
+          data: {
+            message: "Exam Registration successful",
+            registrationInfo,
+          },
+        });
+      }
+
+      return response.status(200).json({
+        result: API_RESPONSE.FAILURE,
+        data: {
+          message: "Register Exam failed - Error in registering exam",
+        },
+      });
+    } else if (mode === "schedule") {
+      const { examId } = request.body;
+      if (!examId) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Schedule Exam failed - Exam ID missing",
+          },
+        });
+      }
+
+      const examInfo = await dbClient.getExamById(examId, { userInfo });
+      if (!examInfo) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Schedule Exam failed - Exam not found",
+          },
+        });
+      }
+
+      if (examInfo.status === EXAM_STATUS.EXAM_SCHEDULED) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Schedule Exam failed - Exam already scheduled",
+          },
+        });
+      }
+
+      if (examInfo.status !== EXAM_STATUS.APPLICATION_OPEN) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Schedule Exam failed - Exam is not open for scheduling",
+          },
+        });
+      }
+
+      const updatedExamInfo = await dbClient.updateExamById({
+        ...examInfo,
+        status: EXAM_STATUS.EXAM_SCHEDULED,
+      });
+
+      if (updatedExamInfo) {
+        return response.status(200).json({
+          result: API_RESPONSE.SUCCESS,
+          data: {
+            message: "Exam Scheduled Successfully",
+            examInfo: updatedExamInfo,
+          },
+        });
+      }
+
+      return response.status(200).json({
+        result: API_RESPONSE.FAILURE,
+        data: {
+          message: "Schedule Exam failed - Error in scheduling exam",
+        },
+      });
+    } else if (mode === "downloadHallTicket") {
+      const { examId } = request.body;
+      if (!examId) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Download Hall Ticket failed - Exam ID missing",
+          },
+        });
+      }
+
+      const examInfo = await dbClient.getExamById(examId, { userInfo });
+      if (!examInfo) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Download Hall Ticket failed - Exam not found",
+          },
+        });
+      }
+
+      if (examInfo.status !== EXAM_STATUS.EXAM_SCHEDULED) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Download Hall Ticket failed - Exam is not scheduled",
+          },
+        });
+      }
+
+      const registrationInfo = await dbClient.isUserRegisteredForExam(examId, userInfo._id);
+      if (!registrationInfo) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Download Hall Ticket failed - User not registered for exam",
+          },
+        });
+      }
+
+      // Generate PDF
+      const doc = new pdf();
+      let buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => {
+        let pdfData = Buffer.concat(buffers);
+        response.set({
+          'Content-Length': Buffer.byteLength(pdfData),
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename=hall_ticket.pdf',
+      });
+        response.send(pdfData);
+      });
+
+      doc.fontSize(20).text('Hall Ticket', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(14).text(`Exam Name: ${examInfo.name}`);
+      doc.text(`Description: ${examInfo.description}`);
+      doc.text(`Instructions: ${examInfo.instructions}`);
+      doc.text(`Start Time: ${new Date(examInfo.startTime).toLocaleString()}`);
+      doc.text(`Duration: ${examInfo.duration} minutes`);
+      doc.text(`Pass Percentage: ${examInfo.passPercentage}%`);
+      doc.moveDown();
+      doc.text(`Student Name: ${userInfo.name}`);
+      doc.text(`Student Email: ${userInfo.email}`);
+      doc.text(`Registration ID: ${registrationInfo._id}`);
+      doc.end();
+    }
   } catch (error) {
     console.log(error);
 
     return response.status(500).json({
       result: API_RESPONSE.FAILURE,
       data: {
-        message: "Get Exams failed - Internal Server Error",
+        message: "Error occured - Internal Server Error",
       },
     });
   }
@@ -203,8 +391,8 @@ router.post("/createexam", async (request, response) => {
     }
 
     const examInfo = await dbClient.createExam({
-      orgId: userInfo.orgId.toString(),
-      orgAdminId: userInfo._id.toString(),
+      orgId: userInfo.orgId,
+      orgAdminId: userInfo._id,
       name,
       description,
       instructions,
