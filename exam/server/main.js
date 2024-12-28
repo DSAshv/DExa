@@ -11,7 +11,7 @@ import { validateRequest } from "../../common/server/authenticator.js";
 import apiRouter from "./api.js";
 import dbClient from "../../database/database-crud-utils.js";
 import { API_RESPONSE } from "../../common/constants/common-constants.js";
-import { getQb } from "./question-bank.js";
+import { getQb, setSetPaper } from "./question-bank.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
@@ -62,7 +62,7 @@ app.use(async (request, response, next) => {
 
 app.get("/fetchQuestionPaper", async (req, res) => {
   let { examid } = req.query;
-  let csvPaper = getQb(examid, res);
+  await setSetPaper(examid);
 });
 
 app.get("/exam/:examId", async (req, res) => {

@@ -28,7 +28,7 @@ const routes = [
   },
   {
     path: "/liveexam",
-    component: () => import("../client/routes/Examstatus.vue"),
+    component: () => import("../client/routes/Liveexam.vue"),
   },
   {
     name: "others",

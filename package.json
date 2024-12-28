@@ -40,6 +40,7 @@
     "detect-port": "^2.1.0",
     "ejs": "^3.1.10",
     "express": "^4.21.2",
+    "jsontocsvbuffer": "^1.5.0",
     "jsonwebtoken": "^9.0.2",
     "kubo-rpc-client": "^5.0.2",
     "multer": "^1.4.5-lts.1",

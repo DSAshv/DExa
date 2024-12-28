@@ -11,6 +11,15 @@ export async function addQbToIpfs(questionBank) {
     throw error;
   }
 }
+export async function addStringToIpfs(string) {
+  try {
+    const result = await ipfs.add(string);
+    return result.cid.toString();
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
 export async function retrieveQb(cid, res) {
   const externalApiUrl = `https://ipfs.io/ipfs/${cid}`;
   try {

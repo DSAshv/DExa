@@ -110,6 +110,24 @@ async function getOrganizationById(_id) {
   }
 }
 
+async function getCidByExamAndSet(examId, setId) {
+  const criteria = {
+    exam_id: { $eq: examId },
+    set_id: { $eq: setId },
+  };
+
+  try {
+    const query = {
+      selector: criteria,
+      fields: ["cid"],
+    };
+    const collections = await dbClient.mango(DATABASE.ORGANIZATIONS, query);
+    return collections; // This will return an object containing matching documents
+  } catch (error) {
+    console.error("Error while fetching Setpaper\n", error);
+  }
+}
+
 // END OF ORGANIZATIONS CRUD OPERATIONS
 
 // START OF EXAMS CRUD OPERATIONS
@@ -199,6 +217,13 @@ async function getQBStoreId(examId, opts = {}) {
     console.error("Error while fetching QB store ID of exam\n", error);
   }
 }
+async function insertIntoExamset(examSet) {
+  try {
+    const user = await dbClient.insert(DATABASE.EXAM_SET, examSet);
+  } catch (error) {
+    console.error("Error while creating user\n");
+  }
+}
 
 async function getExamStatus(examID, opts = {}) {
   try {
@@ -272,6 +297,8 @@ export default {
 };
 
 export {
+  getCidByExamAndSet,
+  insertIntoExamset,
   getUserById,
   getUserByEmail,
   isValidUser,
