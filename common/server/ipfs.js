@@ -3,9 +3,8 @@ import { create } from "kubo-rpc-client";
 
 const ipfs = create({ url: "http://127.0.0.1:5001" }); // Use 127.0.0.1
 
-export async function addQbToIpfs(req, res) {
+export async function addQbToIpfs(questionBank) {
   try {
-    const questionBank = req.files[0];
     const result = await ipfs.add(questionBank.buffer);
     return result.cid.toString();
   } catch (error) {

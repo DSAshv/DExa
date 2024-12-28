@@ -1,0 +1,91 @@
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+
+/* :root {
+    --bs-primary: 56, 73, 89;
+    --bs-primary-rgb: 56, 73, 89;
+    --bs-secondary: 106, 137, 167;
+    --bs-secondary-rgb: 106, 137, 167;
+    --bs-tertiary-color: 189, 221, 252;
+} */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#register-form {
+    min-width: 300px;
+}
+
+.alert-msg {
+    position: absolute !important;
+    top: -5rem;
+    left: 50%;
+    translate: -50% 0;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    min-width: 300px;
+    max-width: 400px;
+    text-align: center;
+    animation: info-msg 3s;
+    z-index: 99999999999;
+}
+
+@keyframes info-msg {
+    0% {
+        top: -5rem
+    }
+    20% {
+        top: 0.5rem
+    }
+    80% {
+        top: 0.5rem
+    }
+    100% {
+        top: -5rem;
+    }
+}
+
+.z-index-max {
+    z-index: 9999;
+}
+
+.tab-btn {
+    display: block;
+    background-color: transparent;
+    border: none;
+    color: white;
+    min-width: 50px;
+    padding-inline: 0.5rem;
+    border-bottom: 4px solid transparent;
+    font-size: 1.05rem;
+}
+
+.tab-btn.tab-active {
+    border-color: white;
+}
+
+.icon-1 {
+    font-size: 7.5rem;
+}
+
+.icon-2 {
+    font-size: 5rem;
+}
+
+.cursor-pointer{
+    cursor: pointer;
+  }
+
+.search-input {
+    min-width: 300px;
+    max-width: 300px;
+}

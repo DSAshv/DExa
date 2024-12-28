@@ -15,7 +15,8 @@
     "watchbuild:post-exam-client": "vite -w build --config vite.config.js -- portal=post-exam source=./post-exam",
     "serve:pre-exam-server": "npm run build:pre-exam-client && nodemon pre-exam/server/main.js",
     "serve:exam-server": "npm run build:exam-client && nodemon exam/server/main.js",
-    "serve:post-exam-server": "npm run build:post-exam-client && nodemon post-exam/server/main.js"
+    "serve:post-exam-server": "npm run build:post-exam-client && nodemon post-exam/server/main.js",
+    "start:ipfs": "ipfs daemon"
   },
   "keywords": [
     "dexa"

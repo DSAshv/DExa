@@ -21,7 +21,6 @@ async function getUserById(_id, opts = {}) {
         user.orgInfo = organization.data.docs[0];
       }
     }
-    console.log(user);
     return user;
   } catch (error) {
     console.error("Error while fetching user\n", error);
@@ -46,7 +45,6 @@ async function getUserByEmail(email, opts = {}) {
         user.orgInfo = organization.data.docs[0];
       }
     }
-    console.log(user);
     return user;
   } catch (error) {
     console.error("Error while fetching user\n", error);
@@ -79,7 +77,6 @@ async function getOrganizationById(_id) {
     }
     const collections = await dbClient.mango(DATABASE.ORGANIZATIONS, query);
     const collection = collections.data.docs?.[0];
-    console.log(collection);
     return collection;
   } catch (error) {
     console.error("Error while fetching organization\n", error);
@@ -99,7 +96,7 @@ async function createExam(examInfo) {
   }
 }
 
-export async function getExamsByOrgId(orgId, opts = {}) {
+async function getExamsByOrgId(orgId, opts = {}) {
   try {
     const query = {
       "selector": {orgId},
@@ -125,8 +122,38 @@ export async function getExamsByOrgId(orgId, opts = {}) {
       exam.orgAdminInfo = await getUserById(exam.orgAdminId);
       exam.orgInfo = await getOrganizationById(exam.orgId);
     })
-    console.log(exams);
     return exams;
+  } catch (error) {
+    console.error("Error while fetching exams\n", error);
+  }
+}
+
+async function getAllExams(opts = {}) {
+  try {
+    const query = {
+      ...(opts.query || {}),
+      "fields": [
+        "_id",
+        "orgId",
+        "orgAdminId",
+        "name",
+        "description",
+        "instructions",
+        "startTime",
+        "duration",
+        "passPercentage",
+        "numberOfQuestions",
+        "status",
+        "qbStoreId",
+        "createdAt"
+      ]
+    }
+    const exams = await dbClient.mango(DATABASE.EXAMS, query);
+    exams?.data?.docs?.forEach(async (exam) => {
+      exam.orgAdminInfo = await getUserById(exam.orgAdminId);
+      exam.orgInfo = await getOrganizationById(exam.orgId);
+    })
+    return exams?.data?.docs || [];
   } catch (error) {
     console.error("Error while fetching exams\n", error);
   }
@@ -141,6 +168,8 @@ export default {
   createUser,
   getOrganizationById,
   createExam,
+  getExamsByOrgId,
+  getAllExams
 };
 
 export {
@@ -150,4 +179,6 @@ export {
   createUser,
   getOrganizationById,
   createExam,
+  getExamsByOrgId,
+  getAllExams
 };
