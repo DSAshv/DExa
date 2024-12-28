@@ -8,7 +8,7 @@ const examMessage = ref(ConfigHolder.config.message);
 
 <template>
     <div>
-      <h1>Exam Status:  {{ examMessage }}</h1>
+      <h1>Live Exam</h1>
       <!-- <p>Exam ID: {{ examMessage }}</p> -->
     </div>
   </template>  

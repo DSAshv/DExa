@@ -10,6 +10,7 @@ import { initDatabase } from "../../database/database.js";
 import { validateRequest } from "../../common/server/authenticator.js";
 import apiRouter from "./api.js";
 import dbClient from "../../database/database-crud-utils.js";
+import { API_RESPONSE } from "../../common/constants/common-constants.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
@@ -63,13 +64,13 @@ app.get("/fetchQuestionPaper", async (req, res) => {
   let csvPaper = getQb(examid, res);
 });
 
-app.get("/:examId", async (req, res) => {
+app.get("/exam/:examId", async (req, res) => {
   const examId = req.params.examId;
   try {
-    let { mode, message } = await dbClient.getExamStatus(examId);
-    request.config.mode = mode; // Assign mode to config
-    request.config.message = message;
-    response.render("index", { config: request.config });
+    const { mode, message } = await dbClient.getExamStatus(examId);
+    req.config.mode = mode;
+    req.config.message = message;
+    res.render("index", { config: req.config });
   } catch (error) {
     return res.status(200).json({
       result: API_RESPONSE.FAILURE,
