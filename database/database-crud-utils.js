@@ -224,6 +224,13 @@ async function insertIntoExamset(examSet) {
     console.error("Error while creating user\n");
   }
 }
+async function insertIntoExamresult(insertQuery) {
+  try {
+    const user = await dbClient.insert(DATABASE.EXAM_RESULT, insertQuery);
+  } catch (error) {
+    console.error("Error while inserting data into exam result");
+  }
+}
 
 async function getExamStatus(examID, opts = {}) {
   try {
@@ -297,6 +304,7 @@ export default {
 };
 
 export {
+  insertIntoExamresult,
   getCidByExamAndSet,
   insertIntoExamset,
   getUserById,

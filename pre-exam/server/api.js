@@ -177,19 +177,19 @@ router.post("/createexam", async (request, response) => {
         });
       }
       const correctOption = row.correctOption;
-      // if (
-      //   ![row.optionA, row.optionB, row.optionC, row.optionD].includes(
-      //     correctOption
-      //   )
-      // ) {
-      //   return response.status(200).json({
-      //     result: API_RESPONSE.FAILURE,
-      //     data: {
-      //       message:
-      //         "Create Exam failed - Invalid correct option in question bank",
-      //     },
-      //   });
-      // }
+      if (
+        ![row.optionA, row.optionB, row.optionC, row.optionD].includes(
+          correctOption
+        )
+      ) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message:
+              "Create Exam failed - Invalid correct option in question bank",
+          },
+        });
+      }
     }
 
     let qbStoreId;

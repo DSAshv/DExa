@@ -60,7 +60,7 @@ app.use(async (request, response, next) => {
   next();
 });
 
-app.get("/fetchQuestionPaper", async (req, res) => {
+app.get("/setExampaper", async (req, res) => {
   let { examid } = req.query;
   await setSetPaper(examid);
 });

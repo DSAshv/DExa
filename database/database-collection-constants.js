@@ -3,6 +3,7 @@ const DATABASE = {
   ORGANIZATIONS: "organizations",
   EXAMS: "exams",
   EXAM_SET: "examset",
+  EXAM_RESULT: "exam_result",
 };
 
 const DATABASE_LIST = Object.values(DATABASE);

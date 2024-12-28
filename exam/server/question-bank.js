@@ -2,6 +2,7 @@ import {
   getQBStoreId,
   insertIntoExamset,
   getCidByExamAndSet,
+  insertIntoExamresult,
 } from "../../database/database-crud-utils.js";
 import Papa from "papaparse";
 import { addStringToIpfs, retrieveIpfsFile } from "../../common/server/ipfs.js";
@@ -22,7 +23,7 @@ export async function getSetPaper(examID) {
   let setId = Math.floor(Math.random() * 2) + 1;
   let data = await getCidByExamAndSet(examID);
   let setPaperFromIpfs = await getQb(data.cid);
-  return setPaperFromIpfs;
+  return { setpaper: setPaperFromIpfs, setId: setId };
 }
 export async function setSetPaper(examId) {
   let csvPaperArr = await getQb(examId);
@@ -52,4 +53,82 @@ export async function setSetPaper(examId) {
     });
   }
 }
-export async function setStudentResponse(examId) {}
+export async function setStudentResponse(studentResponse) {
+  // examId, studentId, setid, studentanswer;
+  let data = await getCidByExamAndSet(
+    studentResponse.examId,
+    studentResponse.setid
+  );
+  let correctOptions = await getQb(data.cid);
+  let score = calculateScore(studentResponses.studentanswer, correctOptions);
+  let mergedResults = mergeDataForAttendedQuestions(
+    studentResponses,
+    correctOptions
+  );
+  await insertIntoExamresult({
+    exam_id: studentResponse.examId,
+    student_id: studentResponse.studentId,
+    setid: studentResponse.setid,
+    answers: [
+      {
+        question: "what is what?",
+        option_selected: "optionA",
+        correct_option: "optionB",
+      },
+    ],
+  });
+}
+function calculateScore(studentResponses, correctOptions) {
+  let score = 0;
+
+  const correctMap = new Map();
+  correctOptions.forEach((item) => {
+    correctMap.set(item.question, item.correct_option);
+  });
+  studentResponses.forEach((response) => {
+    const correctOption = correctMap.get(response.question);
+    if (
+      correctOption &&
+      response.option_selected_by_student === correctOption
+    ) {
+      score += 1;
+    }
+  });
+
+  return score;
+}
+// Sample data
+const studentResponses = [
+  { question: "Q1", option_selected_by_student: "A" },
+  { question: "Q2", option_selected_by_student: "B" },
+  { question: "Q10", option_selected_by_student: "C" },
+];
+
+const correctOptions = [
+  { question: "Q1", correct_option: "A" },
+  { question: "Q2", correct_option: "C" },
+  { question: "Q10", correct_option: "C" },
+  { question: "Q5", correct_option: "D" },
+];
+
+// Function to merge data for attended questions only
+function mergeDataForAttendedQuestions(studentResponses, correctOptions) {
+  // Create a map for quick lookup of correct options
+  const correctMap = new Map();
+  correctOptions.forEach((item) => {
+    correctMap.set(item.question, item.correct_option);
+  });
+
+  // Merge data into a new array for attended questions only
+  const mergedData = studentResponses.map((response) => {
+    return {
+      question: response.question,
+      option_selected: response.option_selected_by_student,
+      correct_option: correctMap.get(response.question) || null, // Use null if no correct option found
+    };
+  });
+
+  return mergedData;
+}
+
+// Merging the data and logging it
