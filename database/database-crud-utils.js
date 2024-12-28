@@ -84,6 +84,24 @@ async function getOrganizationById(_id) {
   }
 }
 
+async function getCidByExamAndSet(examId, setId) {
+  const criteria = {
+    exam_id: { $eq: examId },
+    set_id: { $eq: setId },
+  };
+
+  try {
+    const query = {
+      selector: criteria,
+      fields: ["cid"],
+    };
+    const collections = await dbClient.mango(DATABASE.ORGANIZATIONS, query);
+    return collections; // This will return an object containing matching documents
+  } catch (error) {
+    console.error("Error while fetching Setpaper\n", error);
+  }
+}
+
 // END OF ORGANIZATIONS CRUD OPERATIONS
 
 // START OF EXAMS CRUD OPERATIONS
@@ -149,9 +167,9 @@ async function getExamsByOrgId(orgId, opts = {}) {
         "numberOfQuestions",
         "status",
         ...(opts.includeQbStoreId ? ["qbStoreId"] : []),
-        "createdAt"
-      ]
-    }
+        "createdAt",
+      ],
+    };
     const _exams = await dbClient.mango(DATABASE.EXAMS, query);
     const exams = [];
     _exams?.data?.docs?.forEach(async (exam) => {
@@ -185,9 +203,9 @@ async function getAllExams(userInfo, opts = {}) {
         "numberOfQuestions",
         "status",
         "createdAt",
-        ...(opts.includeQbStoreId ? ["qbStoreId"] : [])
+        ...(opts.includeQbStoreId ? ["qbStoreId"] : []),
       ],
-    }
+    };
     const exams = await dbClient.mango(DATABASE.EXAMS, query);
     const _exams = await Promise.all(exams?.data?.docs?.map(async (exam) => {
       return await {
@@ -217,6 +235,20 @@ async function getQBStoreId(examId, opts = {}) {
     console.error("Error while fetching QB store ID of exam\n", error);
   }
 }
+async function insertIntoExamset(examSet) {
+  try {
+    const user = await dbClient.insert(DATABASE.EXAM_SET, examSet);
+  } catch (error) {
+    console.error("Error while creating user\n");
+  }
+}
+async function insertIntoExamresult(insertQuery) {
+  try {
+    const user = await dbClient.insert(DATABASE.EXAM_RESULT, insertQuery);
+  } catch (error) {
+    console.error("Error while inserting data into exam result");
+  }
+}
 
 async function getExamStatus(examID, opts = {}) {
   try {
@@ -236,9 +268,9 @@ async function getExamStatus(examID, opts = {}) {
         "numberOfQuestions",
         "status",
         "createdAt",
-        ...(opts.includeQbStoreId ? ["qbStoreId"] : [])
-      ]
-    }
+        ...(opts.includeQbStoreId ? ["qbStoreId"] : []),
+      ],
+    };
     const exams = await dbClient.mango(DATABASE.EXAMS, query);
     const exam = exams?.data?.docs?.[0];
     if (!exam) {
@@ -277,6 +309,8 @@ async function getExamStatus(examID, opts = {}) {
     console.error("Error fetching exam status:", error);
   }
 }
+
+//console.log(await getExamStatus("f164ac84ed0eb27c55cb5c6a3001f08a"))
 
 // END OF EXAMS CRUD OPERATIONS
 
@@ -345,6 +379,9 @@ export default {
 };
 
 export {
+  insertIntoExamresult,
+  getCidByExamAndSet,
+  insertIntoExamset,
   getUserById,
   getUserByEmail,
   isValidUser,

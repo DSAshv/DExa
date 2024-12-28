@@ -268,13 +268,12 @@ router.post("/createexam", async (request, response) => {
   try {
     const { userInfo } = request.config || {};
     if (!userInfo || userInfo?.role !== "orgAdmin") {
-        return response.status(200).json({
-            result: API_RESPONSE.FAILURE,
-            data: {
-                message: "Create Exam failed - Unauthorized access",
-            },
-        });
-
+      return response.status(200).json({
+        result: API_RESPONSE.FAILURE,
+        data: {
+          message: "Create Exam failed - Unauthorized access",
+        },
+      });
     }
     const {
       name,
