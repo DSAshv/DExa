@@ -56,6 +56,13 @@ class ConfigHolder {
   static get isSuperAdmin() {
     return config.userInfo?.role === "superAdmin";
   }
+
+  static get getExamMode() {
+    if (config.message) {
+      return config.message;
+    }
+    return "";
+  }
 }
 
 export { ConfigHolder, ConfigHolder as default };

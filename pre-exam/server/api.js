@@ -190,9 +190,9 @@ router.post("/createexam", async (request, response) => {
       }
     }
 
-    let qbStoreID;
+    let qbStoreId;
     try {
-      qbStoreID = await addQbToIpfs(questionBank);
+      qbStoreId = await addQbToIpfs(questionBank);
     } catch (error) {
       return response.status(200).json({
         result: API_RESPONSE.FAILURE,
@@ -214,7 +214,7 @@ router.post("/createexam", async (request, response) => {
       numberOfQuestions,
       status: EXAM_STATUS.APPLICATION_OPEN,
       createdAt: String(Date.now()),
-      qbStoreID: qbStoreID,
+      qbStoreId,
     });
 
     if (examInfo) {

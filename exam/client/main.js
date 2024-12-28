@@ -25,6 +25,10 @@ const routes = [
         component: () => import("./routes/Dashboard.vue"),
     },
     {
+        path: "/examstatus",
+        component: () => import("../client/routes/Examstatus.vue"),
+      },
+    {
         name: "others",
         path: "/:catchAll(.*)",
         redirect: "/",

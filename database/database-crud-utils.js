@@ -1,5 +1,6 @@
 import dbClient from "./database.js";
 import { DATABASE } from "./database-collection-constants.js";
+import { EXAM_STATUS } from "../common/constants/common-constants.js";
 
 // START OF USERS CRUD OPERATIONS
 
@@ -112,7 +113,7 @@ async function getExamsByOrgId(orgId, opts = {}) {
         "passPercentage",
         "numberOfQuestions",
         "status",
-        "qbStoreId",
+        ...(opts.includeQbStoreId ? ["qbStoreId"] : []),
         "createdAt"
       ]
     }
@@ -144,8 +145,8 @@ async function getAllExams(opts = {}) {
         "passPercentage",
         "numberOfQuestions",
         "status",
-        "qbStoreId",
-        "createdAt"
+        "createdAt",
+        ...(opts.includeQbStoreId ? ["qbStoreId"] : [])
       ]
     }
     const exams = await dbClient.mango(DATABASE.EXAMS, query);
@@ -159,6 +160,81 @@ async function getAllExams(opts = {}) {
   }
 }
 
+async function getQBStoreId(examId, opts = {}) {
+  try {
+    const exam = await dbClient.mango(DATABASE.EXAMS, {
+      "selector": {
+        "_id": examId
+      },
+      "fields": ["qbStoreId"]
+    });
+    return exam.data.docs[0].qbStoreId;
+  } catch (error) {
+    console.error("Error while fetching QB store ID of exam\n", error);
+  }
+}
+
+async function getExamStatus(examID, opts = {}) {
+  try {
+    const query = {
+      "selector": {"_id": examID},
+      "fields": [
+        "_id",
+        "orgId",
+        "orgAdminId",
+        "name",
+        "description",
+        "instructions",
+        "startTime",
+        "duration",
+        "passPercentage",
+        "numberOfQuestions",
+        "status",
+        "createdAt",
+        ...(opts.includeQbStoreId ? ["qbStoreId"] : [])
+      ]
+    }
+    const exams = await dbClient.mango(DATABASE.EXAMS, query);
+    const exam = exams?.data?.docs?.[0];
+    if (!exam) {
+      return { mode: "notFound", message: "Exam not found." };
+    }
+
+    const currentTime = Date.now();
+    const examStartTime = parseInt(exam.startTime, 10) * 1000; // Convert to milliseconds
+
+    if (currentTime < examStartTime) {
+      const date = new Date(examStartTime);
+      const optionsDate = { year: "numeric", month: "2-digit", day: "2-digit" };
+      const optionsTime = {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      };
+
+      return {
+        mode: EXAM_STATUS.EXAM_SCHEDULED,
+        message: `Exam will start on ${date.toLocaleDateString(
+          "en-US",
+          optionsDate
+        )} at ${date.toLocaleTimeString("en-US", optionsTime)}.`,
+      };
+    } else if (
+      currentTime >
+      examStartTime + exam.duration * 60 * 1000
+    ) {
+      return { mode: EXAM_STATUS.EXAM_ENDED, message: "Exam has ended." };
+    } else {
+      return { mode: EXAM_STATUS.EXAM_LIVE, message: "Exam is live." };
+    }
+  } catch (error) {
+    console.error("Error fetching exam status:", error);
+  }
+}
+
+console.log(await getExamStatus("f164ac84ed0eb27c55cb5c6a3001f08a"))
+
 // END OF EXAMS CRUD OPERATIONS
 
 export default {
@@ -169,7 +245,9 @@ export default {
   getOrganizationById,
   createExam,
   getExamsByOrgId,
-  getAllExams
+  getAllExams,
+  getQBStoreId,
+  getExamStatus
 };
 
 export {
@@ -180,5 +258,7 @@ export {
   getOrganizationById,
   createExam,
   getExamsByOrgId,
-  getAllExams
+  getAllExams,
+  getQBStoreId,
+  getExamStatus
 };

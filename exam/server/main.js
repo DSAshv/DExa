@@ -9,6 +9,7 @@ import { detect } from "detect-port";
 import { initDatabase } from "../../database/database.js";
 import { validateRequest } from "../../common/server/authenticator.js";
 import apiRouter from "./api.js";
+import dbClient from "../../database/database-crud-utils.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
@@ -55,6 +56,28 @@ app.use(async (request, response, next) => {
     }
   }
   next();
+});
+
+app.get("/fetchQuestionPaper", async (req, res) => {
+  let { examid } = req.query;
+  let csvPaper = getQb(examid, res);
+});
+
+app.get("/:examId", async (req, res) => {
+  const examId = req.params.examId;
+  try {
+    let { mode, message } = await dbClient.getExamStatus(examId);
+    request.config.mode = mode; // Assign mode to config
+    request.config.message = message;
+    response.render("index", { config: request.config });
+  } catch (error) {
+    return res.status(200).json({
+      result: API_RESPONSE.FAILURE,
+      data: {
+        message: "Error fetching exam status",
+      },
+    });
+  }
 });
 
 app.get("/", (request, response) => {
