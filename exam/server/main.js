@@ -11,6 +11,7 @@ import { validateRequest } from "../../common/server/authenticator.js";
 import apiRouter from "./api.js";
 import dbClient from "../../database/database-crud-utils.js";
 import { API_RESPONSE } from "../../common/constants/common-constants.js";
+import { getQb } from "./question-bank.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });

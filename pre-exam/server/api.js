@@ -14,7 +14,6 @@ import { parse } from "csv-parse";
 import { Readable } from "stream";
 import { addQbToIpfs } from "../../common/server/ipfs.js";
 
-
 const router = express.Router();
 
 router.post("/signin", (request, response) => {
@@ -45,11 +44,15 @@ router.post("/exams", async (request, response) => {
     let query = {};
     if (mode === "get") {
       query = {
-        "selector": {
-          "status": {
-            "$in": [EXAM_STATUS.APPLICATION_OPEN, EXAM_STATUS.EXAM_SCHEDULED, EXAM_STATUS.EXAM_LIVE]
-          }
-        }
+        selector: {
+          status: {
+            $in: [
+              EXAM_STATUS.APPLICATION_OPEN,
+              EXAM_STATUS.EXAM_SCHEDULED,
+              EXAM_STATUS.EXAM_LIVE,
+            ],
+          },
+        },
       };
       if (userInfo.role === USER_ROLES.ORGADMIN) {
         query.selector.orgId = userInfo.orgId.toString();
@@ -80,13 +83,12 @@ router.post("/createexam", async (request, response) => {
   try {
     const { userInfo } = request.config || {};
     if (!userInfo || userInfo?.role !== "orgAdmin") {
-        return response.status(200).json({
-            result: API_RESPONSE.FAILURE,
-            data: {
-                message: "Create Exam failed - Unauthorized access",
-            },
-        });
-
+      return response.status(200).json({
+        result: API_RESPONSE.FAILURE,
+        data: {
+          message: "Create Exam failed - Unauthorized access",
+        },
+      });
     }
     const {
       name,
@@ -175,19 +177,19 @@ router.post("/createexam", async (request, response) => {
         });
       }
       const correctOption = row.correctOption;
-      if (
-        ![row.optionA, row.optionB, row.optionC, row.optionD].includes(
-          correctOption
-        )
-      ) {
-        return response.status(200).json({
-          result: API_RESPONSE.FAILURE,
-          data: {
-            message:
-              "Create Exam failed - Invalid correct option in question bank",
-          },
-        });
-      }
+      // if (
+      //   ![row.optionA, row.optionB, row.optionC, row.optionD].includes(
+      //     correctOption
+      //   )
+      // ) {
+      //   return response.status(200).json({
+      //     result: API_RESPONSE.FAILURE,
+      //     data: {
+      //       message:
+      //         "Create Exam failed - Invalid correct option in question bank",
+      //     },
+      //   });
+      // }
     }
 
     let qbStoreId;

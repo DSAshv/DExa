@@ -7,17 +7,30 @@ import { EXAM_STATUS } from "../common/constants/common-constants.js";
 async function getUserById(_id, opts = {}) {
   try {
     const query = {
-      "selector": {_id},
-      "fields": ["_id", "name", "email", "role", "orgId", "dateOfBirth", "location", "pincode", ...(opts.includePassword ? ["password"] : [])]
-    }
+      selector: { _id },
+      fields: [
+        "_id",
+        "name",
+        "email",
+        "role",
+        "orgId",
+        "dateOfBirth",
+        "location",
+        "pincode",
+        ...(opts.includePassword ? ["password"] : []),
+      ],
+    };
     const users = await dbClient.mango(DATABASE.USERS, query);
     const user = users.data.docs?.[0];
     if (user?.role === "orgAdmin") {
       const orgQuery = {
-        "selector": {"_id": user.orgId},
-        "fields": ["_id", "name"]
-      }
-      const organization = await dbClient.mango(DATABASE.ORGANIZATIONS, orgQuery);
+        selector: { _id: user.orgId },
+        fields: ["_id", "name"],
+      };
+      const organization = await dbClient.mango(
+        DATABASE.ORGANIZATIONS,
+        orgQuery
+      );
       if (organization.data.docs?.[0]) {
         user.orgInfo = organization.data.docs[0];
       }
@@ -31,17 +44,30 @@ async function getUserById(_id, opts = {}) {
 async function getUserByEmail(email, opts = {}) {
   try {
     const query = {
-      "selector": {email},
-      "fields": ["_id", "name", "email", "role", "orgId", "dateOfBirth", "location", "pincode", ...(opts.includePassword ? ["password"] : [])]
-    }
+      selector: { email },
+      fields: [
+        "_id",
+        "name",
+        "email",
+        "role",
+        "orgId",
+        "dateOfBirth",
+        "location",
+        "pincode",
+        ...(opts.includePassword ? ["password"] : []),
+      ],
+    };
     const users = await dbClient.mango(DATABASE.USERS, query);
     const user = users.data.docs?.[0];
     if (user?.role === "orgAdmin") {
       const orgQuery = {
-        "selector": {"_id": user.orgId},
-        "fields": ["_id", "name"]
-      }
-      const organization = await dbClient.mango(DATABASE.ORGANIZATIONS, orgQuery);
+        selector: { _id: user.orgId },
+        fields: ["_id", "name"],
+      };
+      const organization = await dbClient.mango(
+        DATABASE.ORGANIZATIONS,
+        orgQuery
+      );
       if (organization.data.docs?.[0]) {
         user.orgInfo = organization.data.docs[0];
       }
@@ -60,7 +86,7 @@ async function isValidUser(uid) {
 async function createUser(userInfo) {
   try {
     const user = await dbClient.insert(DATABASE.USERS, userInfo);
-    return {_id: user.data.id, ...userInfo};
+    return { _id: user.data.id, ...userInfo };
   } catch (error) {
     console.error("Error while creating user\n", error);
   }
@@ -73,9 +99,9 @@ async function createUser(userInfo) {
 async function getOrganizationById(_id) {
   try {
     const query = {
-      "selector": {_id},
-      "fields": ["_id", "name"]
-    }
+      selector: { _id },
+      fields: ["_id", "name"],
+    };
     const collections = await dbClient.mango(DATABASE.ORGANIZATIONS, query);
     const collection = collections.data.docs?.[0];
     return collection;
@@ -91,7 +117,7 @@ async function getOrganizationById(_id) {
 async function createExam(examInfo) {
   try {
     const exam = await dbClient.insert(DATABASE.EXAMS, examInfo);
-    return {_id: exam.data.id, ...examInfo};
+    return { _id: exam.data.id, ...examInfo };
   } catch (error) {
     console.error("Error while creating exam\n", error);
   }
@@ -100,8 +126,8 @@ async function createExam(examInfo) {
 async function getExamsByOrgId(orgId, opts = {}) {
   try {
     const query = {
-      "selector": {orgId},
-      "fields": [
+      selector: { orgId },
+      fields: [
         "_id",
         "orgId",
         "orgAdminId",
@@ -114,15 +140,15 @@ async function getExamsByOrgId(orgId, opts = {}) {
         "numberOfQuestions",
         "status",
         ...(opts.includeQbStoreId ? ["qbStoreId"] : []),
-        "createdAt"
-      ]
-    }
+        "createdAt",
+      ],
+    };
     const _exams = await dbClient.mango(DATABASE.EXAMS, query);
     const exams = [];
     _exams?.data?.docs?.forEach(async (exam) => {
       exam.orgAdminInfo = await getUserById(exam.orgAdminId);
       exam.orgInfo = await getOrganizationById(exam.orgId);
-    })
+    });
     return exams;
   } catch (error) {
     console.error("Error while fetching exams\n", error);
@@ -133,7 +159,7 @@ async function getAllExams(opts = {}) {
   try {
     const query = {
       ...(opts.query || {}),
-      "fields": [
+      fields: [
         "_id",
         "orgId",
         "orgAdminId",
@@ -146,14 +172,14 @@ async function getAllExams(opts = {}) {
         "numberOfQuestions",
         "status",
         "createdAt",
-        ...(opts.includeQbStoreId ? ["qbStoreId"] : [])
-      ]
-    }
+        ...(opts.includeQbStoreId ? ["qbStoreId"] : []),
+      ],
+    };
     const exams = await dbClient.mango(DATABASE.EXAMS, query);
     exams?.data?.docs?.forEach(async (exam) => {
       exam.orgAdminInfo = await getUserById(exam.orgAdminId);
       exam.orgInfo = await getOrganizationById(exam.orgId);
-    })
+    });
     return exams?.data?.docs || [];
   } catch (error) {
     console.error("Error while fetching exams\n", error);
@@ -163,10 +189,10 @@ async function getAllExams(opts = {}) {
 async function getQBStoreId(examId, opts = {}) {
   try {
     const exam = await dbClient.mango(DATABASE.EXAMS, {
-      "selector": {
-        "_id": examId
+      selector: {
+        _id: examId,
       },
-      "fields": ["qbStoreId"]
+      fields: ["qbStoreId"],
     });
     return exam.data.docs[0].qbStoreId;
   } catch (error) {
@@ -177,8 +203,8 @@ async function getQBStoreId(examId, opts = {}) {
 async function getExamStatus(examID, opts = {}) {
   try {
     const query = {
-      "selector": {"_id": examID},
-      "fields": [
+      selector: { _id: examID },
+      fields: [
         "_id",
         "orgId",
         "orgAdminId",
@@ -191,9 +217,9 @@ async function getExamStatus(examID, opts = {}) {
         "numberOfQuestions",
         "status",
         "createdAt",
-        ...(opts.includeQbStoreId ? ["qbStoreId"] : [])
-      ]
-    }
+        ...(opts.includeQbStoreId ? ["qbStoreId"] : []),
+      ],
+    };
     const exams = await dbClient.mango(DATABASE.EXAMS, query);
     const exam = exams?.data?.docs?.[0];
     if (!exam) {
@@ -220,10 +246,7 @@ async function getExamStatus(examID, opts = {}) {
           optionsDate
         )} at ${date.toLocaleTimeString("en-US", optionsTime)}.`,
       };
-    } else if (
-      currentTime >
-      examStartTime + exam.duration * 60 * 1000
-    ) {
+    } else if (currentTime > examStartTime + exam.duration * 60 * 1000) {
       return { mode: EXAM_STATUS.EXAM_ENDED, message: "Exam has ended." };
     } else {
       return { mode: EXAM_STATUS.EXAM_LIVE, message: "Exam is live." };
@@ -232,8 +255,6 @@ async function getExamStatus(examID, opts = {}) {
     console.error("Error fetching exam status:", error);
   }
 }
-
-console.log(await getExamStatus("f164ac84ed0eb27c55cb5c6a3001f08a"))
 
 // END OF EXAMS CRUD OPERATIONS
 
@@ -247,7 +268,7 @@ export default {
   getExamsByOrgId,
   getAllExams,
   getQBStoreId,
-  getExamStatus
+  getExamStatus,
 };
 
 export {
@@ -260,5 +281,5 @@ export {
   getExamsByOrgId,
   getAllExams,
   getQBStoreId,
-  getExamStatus
+  getExamStatus,
 };
