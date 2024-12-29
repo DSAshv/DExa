@@ -116,6 +116,11 @@ async function createExam(examInfo) {
 }
 
 async function getExamById(examId, opts = {}) {
+  opts = {
+    includeQbStoreId: false,
+    includeOtherInfo: true,
+    ...opts
+  }
   try {
     const query = {
       "selector": {"_id": examId},
@@ -138,10 +143,12 @@ async function getExamById(examId, opts = {}) {
     }
     const exams = await dbClient.mango(DATABASE.EXAMS, query);
     const exam = exams.data.docs[0];
-    exam.orgAdminInfo = await getUserById(exam.orgAdminId);
-    exam.orgInfo = await getOrganizationById(exam.orgId);
-    if (opts.userInfo?.role === "student") {
-      exam.hasRegistered = await isUserRegisteredForExam(examId, opts.userInfo?._id);
+    if (opts.includeOtherInfo) {
+      exam.orgAdminInfo = await getUserById(exam.orgAdminId);
+      exam.orgInfo = await getOrganizationById(exam.orgId);
+      if (opts.userInfo?.role === "student") {
+        exam.hasRegistered = await isUserRegisteredForExam(examId, opts.userInfo?._id);
+      }
     }
     return exam;
   } catch (error) {
@@ -349,10 +356,14 @@ async function isUserRegisteredForExam(examId, studentId) {
   return Boolean(registrations?.data?.docs?.length);
 }
 
-async function updateExamById(examInfo) {
+async function updateExamById(examId, _examInfo) {
   try {
-    const exam = await dbClient.update(DATABASE.EXAMS, examInfo);
-    return {_id: exam.data.id, ...examInfo};
+    let examInfo = await getExamById(examId, { includeQbStoreId: true, includeOtherInfo: false });
+    if (examInfo) {
+      examInfo = { ...examInfo, ..._examInfo };
+      const exam = await dbClient.update(DATABASE.EXAMS, examInfo);
+      return examInfo;
+    }
   } catch (error) {
     console.error("Error while updating exam\n", error);
   }

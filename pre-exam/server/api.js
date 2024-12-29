@@ -14,7 +14,6 @@ import { parse } from "csv-parse";
 import { Readable } from "stream";
 import { addQbToIpfs } from "../../common/server/ipfs.js";
 import pdf from "pdfkit";
-import { corn } from "node-cron";
 
 const router = express.Router();
 
@@ -84,17 +83,17 @@ router.post("/exams", async (request, response) => {
         });
       }
 
-      if (examInfo && mode === "register"){
-        cron.schedule('0 9 * * *', () => {
-            //at exam time call method to create qp set
-            //at exam end time call deployNFT from createQPFNFT
-        });
-        //exam start time + duration + 2 mins
-        cron.schedule('0 9 * * *', () => {
-            //at exam end time call deployNFT from createQPFNFT
-            //add returned hash to DB
-        });
-      }
+      // if (examInfo && mode === "register"){  
+      //   cron.schedule('0 9 * * *', () => {
+      //       //at exam time call method to create qp set
+      //       //at exam end time call deployNFT from createQPFNFT
+      //   });
+      //   //exam start time + duration + 2 mins
+      //   cron.schedule('0 9 * * *', () => {
+      //       //at exam end time call deployNFT from createQPFNFT
+      //       //add returned hash to DB
+      //   });
+      // }
 
       const isUserRegisteredForExam = await dbClient.isUserRegisteredForExam(examId, userInfo._id);
       if (isUserRegisteredForExam) {
@@ -148,7 +147,7 @@ router.post("/exams", async (request, response) => {
         });
       }
 
-      const examInfo = await dbClient.getExamById(examId, { userInfo });
+      const examInfo = await dbClient.getExamById(examId, { userInfo, includeOthers: false });
       if (!examInfo) {
         return response.status(200).json({
           result: API_RESPONSE.FAILURE,
@@ -176,8 +175,7 @@ router.post("/exams", async (request, response) => {
         });
       }
 
-      const updatedExamInfo = await dbClient.updateExamById({
-        ...examInfo,
+      const updatedExamInfo = await dbClient.updateExamById(examId, {
         status: EXAM_STATUS.EXAM_SCHEDULED,
       });
 

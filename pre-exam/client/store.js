@@ -4,8 +4,8 @@ import { ROLES_TABS_MAP } from "../../common/constants/client-constants";
 import { ConfigHolder } from "../../common/utils/config-holder";
 
 export const useStore = defineStore("store", () => {
-    const currentTab = ref("dashboard");
-    const tabs = ROLES_TABS_MAP[ConfigHolder.role || "student"]
+    const tabs = ROLES_TABS_MAP["pre-exam"][ConfigHolder.role]
+    const currentTab = ref(tabs?.[0]?.id || "");
     const exams = ref([]);
 
     return {
