@@ -9,9 +9,9 @@ class ConfigHolder {
     config = _config || {};
   }
 
-    static get isAuthorized() {
-        return Boolean(config.authorized) || false;
-    }
+  static get isAuthorized() {
+    return Boolean(config.authorized) || false;
+  }
 
   static get origin() {
     return config.origin || window.location.origin;
@@ -23,6 +23,14 @@ class ConfigHolder {
 
   static get name() {
     return config.userInfo?.name || "";
+  }
+
+  static get examId() {
+    return config.examId || "";
+  }
+
+  static get examInfo() {
+    return config.examInfo || {};
   }
 
   static get role() {
@@ -62,6 +70,9 @@ class ConfigHolder {
       return config.message;
     }
     return "";
+  }
+  static get hasExamMode() {
+    return !!config.message;
   }
 }
 

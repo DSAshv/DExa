@@ -1,23 +1,40 @@
 import dbClient from "./database.js";
 import { DATABASE } from "./database-collection-constants.js";
-import { EXAM_STATUS, USER_ROLES } from "../common/constants/common-constants.js";
+import {
+  EXAM_STATUS,
+  USER_ROLES,
+} from "../common/constants/common-constants.js";
 
 // START OF USERS CRUD OPERATIONS
 
 async function getUserById(_id, opts = {}) {
   try {
     const query = {
-      "selector": {_id},
-      "fields": ["_id", "_rev", "name", "email", "role", "orgId", "dateOfBirth", "location", "pincode", ...(opts.includePassword ? ["password"] : [])]
-    }
+      selector: { _id },
+      fields: [
+        "_id",
+        "_rev",
+        "name",
+        "email",
+        "role",
+        "orgId",
+        "dateOfBirth",
+        "location",
+        "pincode",
+        ...(opts.includePassword ? ["password"] : []),
+      ],
+    };
     const users = await dbClient.mango(DATABASE.USERS, query);
     const user = users.data.docs?.[0];
     if (user?.role === "orgAdmin") {
       const orgQuery = {
-        "selector": {"_id": user.orgId},
-        "fields": ["_id", "_rev", "name"]
-      }
-      const organization = await dbClient.mango(DATABASE.ORGANIZATIONS, orgQuery);
+        selector: { _id: user.orgId },
+        fields: ["_id", "_rev", "name"],
+      };
+      const organization = await dbClient.mango(
+        DATABASE.ORGANIZATIONS,
+        orgQuery
+      );
       if (organization.data.docs?.[0]) {
         user.orgInfo = organization.data.docs[0];
       }
@@ -27,21 +44,43 @@ async function getUserById(_id, opts = {}) {
     console.error("Error while fetching user\n", error);
   }
 }
-
+async function getNFT(setid, exam_id, opts = {}) {
+  try {
+    const query = {
+      selector: { exam_id: exam_id, set_id: setid },
+      fields: ["nfttoken"],
+    };
+    return await dbClient.mango(DATABASE.NFT_TOKEN, query);
+  } catch (err) {}
+}
 async function getUserByEmail(email, opts = {}) {
   try {
     const query = {
-      "selector": {email},
-      "fields": ["_id", "_rev", "name", "email", "role", "orgId", "dateOfBirth", "location", "pincode", ...(opts.includePassword ? ["password"] : [])]
-    }
+      selector: { email },
+      fields: [
+        "_id",
+        "_rev",
+        "name",
+        "email",
+        "role",
+        "orgId",
+        "dateOfBirth",
+        "location",
+        "pincode",
+        ...(opts.includePassword ? ["password"] : []),
+      ],
+    };
     const users = await dbClient.mango(DATABASE.USERS, query);
     const user = users.data.docs?.[0];
     if (user?.role === "orgAdmin") {
       const orgQuery = {
-        "selector": {"_id": user.orgId},
-        "fields": ["_id", "_rev", "name"]
-      }
-      const organization = await dbClient.mango(DATABASE.ORGANIZATIONS, orgQuery);
+        selector: { _id: user.orgId },
+        fields: ["_id", "_rev", "name"],
+      };
+      const organization = await dbClient.mango(
+        DATABASE.ORGANIZATIONS,
+        orgQuery
+      );
       if (organization.data.docs?.[0]) {
         user.orgInfo = organization.data.docs[0];
       }
@@ -60,7 +99,7 @@ async function isValidUser(uid) {
 async function createUser(userInfo) {
   try {
     const user = await dbClient.insert(DATABASE.USERS, userInfo);
-    return {_id: user.data.id, ...userInfo};
+    return { _id: user.data.id, ...userInfo };
   } catch (error) {
     console.error("Error while creating user\n", error);
   }
@@ -73,14 +112,50 @@ async function createUser(userInfo) {
 async function getOrganizationById(_id) {
   try {
     const query = {
-      "selector": {_id},
-      "fields": ["_id", "_rev", "name"]
-    }
+      selector: { _id },
+      fields: ["_id", "_rev", "name"],
+    };
     const collections = await dbClient.mango(DATABASE.ORGANIZATIONS, query);
     const collection = collections.data.docs?.[0];
     return collection;
   } catch (error) {
     console.error("Error while fetching organization\n", error);
+  }
+}
+
+async function getStudentanswer(studentid, exam_id) {
+  const criteria = {
+    exam_id: exam_id,
+    student_id: studentid,
+  };
+
+  try {
+    const query = {
+      selector: criteria,
+      fields: ["setid", "answers"],
+    };
+    const collections = await dbClient.mango(DATABASE.EXAM_RESULT, query);
+    return collections; // This will return an object containing matching documents
+  } catch (error) {
+    console.error("Error while fetching Setpaper\n", error);
+  }
+}
+
+async function getCidByExamAndSet(examId, setId) {
+  const criteria = {
+    exam_id: examId,
+    set_id: setId,
+  };
+
+  try {
+    const query = {
+      selector: criteria,
+      fields: ["cid"],
+    };
+    const collections = await dbClient.mango(DATABASE.EXAM_SET, query);
+    return collections; // This will return an object containing matching documents
+  } catch (error) {
+    console.error("Error while fetching Setpaper\n", error);
   }
 }
 
@@ -91,17 +166,22 @@ async function getOrganizationById(_id) {
 async function createExam(examInfo) {
   try {
     const exam = await dbClient.insert(DATABASE.EXAMS, examInfo);
-    return {_id: exam.data.id, ...examInfo};
+    return { _id: exam.data.id, ...examInfo };
   } catch (error) {
     console.error("Error while creating exam\n", error);
   }
 }
 
 async function getExamById(examId, opts = {}) {
+  opts = {
+    includeQbStoreId: false,
+    includeOtherInfo: true,
+    ...opts,
+  };
   try {
     const query = {
-      "selector": {"_id": examId},
-      "fields": [
+      selector: { _id: examId },
+      fields: [
         "_id",
         "_rev",
         "orgId",
@@ -115,27 +195,38 @@ async function getExamById(examId, opts = {}) {
         "numberOfQuestions",
         "status",
         ...(opts.includeQbStoreId ? ["qbStoreId"] : []),
-        "createdAt"
-      ]
-    }
+        "createdAt",
+      ],
+    };
     const exams = await dbClient.mango(DATABASE.EXAMS, query);
     const exam = exams.data.docs[0];
-    exam.orgAdminInfo = await getUserById(exam.orgAdminId);
-    exam.orgInfo = await getOrganizationById(exam.orgId);
-    if (opts.userInfo?.role === "student") {
-      exam.hasRegistered = await isUserRegisteredForExam(examId, opts.userInfo?._id);
+    if (opts.includeOtherInfo) {
+      exam.orgAdminInfo = await getUserById(exam.orgAdminId);
+      exam.orgInfo = await getOrganizationById(exam.orgId);
+      if (opts.userInfo?.role === "student") {
+        exam.hasRegistered = await isUserRegisteredForExam(
+          examId,
+          opts.userInfo?._id
+        );
+      }
     }
     return exam;
   } catch (error) {
     console.error("Error while fetching exam\n", error);
   }
 }
-
+async function setNftHashToken(query) {
+  try {
+    const user = await dbClient.insert(DATABASE.NFT_TOKEN, query);
+  } catch (error) {
+    console.log(error);
+  }
+}
 async function getExamsByOrgId(orgId, opts = {}) {
   try {
     const query = {
-      "selector": {orgId},
-      "fields": [
+      selector: { orgId },
+      fields: [
         "_id",
         "_rev",
         "orgId",
@@ -149,9 +240,9 @@ async function getExamsByOrgId(orgId, opts = {}) {
         "numberOfQuestions",
         "status",
         ...(opts.includeQbStoreId ? ["qbStoreId"] : []),
-        "createdAt"
-      ]
-    }
+        "createdAt",
+      ],
+    };
     const _exams = await dbClient.mango(DATABASE.EXAMS, query);
     const exams = [];
     _exams?.data?.docs?.forEach(async (exam) => {
@@ -160,7 +251,7 @@ async function getExamsByOrgId(orgId, opts = {}) {
       if (opts.userInfo.role !== USER_ROLES.STUDENT) {
         exam.registrations = await getExamRegistrations(exam._id, opts);
       }
-    })
+    });
     return exams;
   } catch (error) {
     console.error("Error while fetching exams\n", error);
@@ -171,7 +262,7 @@ async function getAllExams(userInfo, opts = {}) {
   try {
     const query = {
       ...(opts.query || {}),
-      "fields": [
+      fields: [
         "_id",
         "_rev",
         "orgId",
@@ -185,19 +276,30 @@ async function getAllExams(userInfo, opts = {}) {
         "numberOfQuestions",
         "status",
         "createdAt",
-        ...(opts.includeQbStoreId ? ["qbStoreId"] : [])
+        ...(opts.includeQbStoreId ? ["qbStoreId"] : []),
       ],
-    }
+    };
     const exams = await dbClient.mango(DATABASE.EXAMS, query);
-    const _exams = await Promise.all(exams?.data?.docs?.map(async (exam) => {
-      return await {
-        ...exam,
-        orgAdminInfo: await getUserById(exam.orgAdminId),
-        orgInfo: await getOrganizationById(exam.orgId),
-        ...(userInfo?.role === USER_ROLES.STUDENT ? { hasRegistered: await isUserRegisteredForExam(exam._id, userInfo._id) } : {}),
-        ...(userInfo?.role !== USER_ROLES.STUDENT ? { registrations: await getExamRegistrations(exam._id, opts) } : {})
-      }
-    }));
+    const _exams = await Promise.all(
+      exams?.data?.docs?.map(async (exam) => {
+        return await {
+          ...exam,
+          orgAdminInfo: await getUserById(exam.orgAdminId),
+          orgInfo: await getOrganizationById(exam.orgId),
+          ...(userInfo?.role === USER_ROLES.STUDENT
+            ? {
+                hasRegistered: await isUserRegisteredForExam(
+                  exam._id,
+                  userInfo._id
+                ),
+              }
+            : {}),
+          ...(userInfo?.role !== USER_ROLES.STUDENT
+            ? { registrations: await getExamRegistrations(exam._id, opts) }
+            : {}),
+        };
+      })
+    );
     return _exams || [];
   } catch (error) {
     console.error("Error while fetching exams\n", error);
@@ -207,22 +309,36 @@ async function getAllExams(userInfo, opts = {}) {
 async function getQBStoreId(examId, opts = {}) {
   try {
     const exam = await dbClient.mango(DATABASE.EXAMS, {
-      "selector": {
-        "_id": examId
+      selector: {
+        _id: examId,
       },
-      "fields": ["qbStoreId"]
+      fields: ["qbStoreId"],
     });
     return exam.data.docs[0].qbStoreId;
   } catch (error) {
     console.error("Error while fetching QB store ID of exam\n", error);
   }
 }
+async function insertIntoExamset(examSet) {
+  try {
+    const user = await dbClient.insert(DATABASE.EXAM_SET, examSet);
+  } catch (error) {
+    console.error("Error while creating user\n");
+  }
+}
+async function insertIntoExamresult(insertQuery) {
+  try {
+    const user = await dbClient.insert(DATABASE.EXAM_RESULT, insertQuery);
+  } catch (error) {
+    console.error("Error while inserting data into exam result");
+  }
+}
 
 async function getExamStatus(examID, opts = {}) {
   try {
     const query = {
-      "selector": {"_id": examID},
-      "fields": [
+      selector: { _id: examID },
+      fields: [
         "_id",
         "_rev",
         "orgId",
@@ -236,9 +352,9 @@ async function getExamStatus(examID, opts = {}) {
         "numberOfQuestions",
         "status",
         "createdAt",
-        ...(opts.includeQbStoreId ? ["qbStoreId"] : [])
-      ]
-    }
+        ...(opts.includeQbStoreId ? ["qbStoreId"] : []),
+      ],
+    };
     const exams = await dbClient.mango(DATABASE.EXAMS, query);
     const exam = exams?.data?.docs?.[0];
     if (!exam) {
@@ -246,7 +362,7 @@ async function getExamStatus(examID, opts = {}) {
     }
 
     const currentTime = Date.now();
-    const examStartTime = parseInt(exam.startTime, 10) * 1000; // Convert to milliseconds
+    const examStartTime = Number(exam.startTime); // Convert to milliseconds
 
     if (currentTime < examStartTime) {
       const date = new Date(examStartTime);
@@ -267,7 +383,7 @@ async function getExamStatus(examID, opts = {}) {
       };
     } else if (
       currentTime >
-      examStartTime + exam.duration * 60 * 1000
+      examStartTime + (exam.duration * 60 * 1000)
     ) {
       return { mode: EXAM_STATUS.EXAM_ENDED, message: "Exam has ended." };
     } else {
@@ -278,14 +394,19 @@ async function getExamStatus(examID, opts = {}) {
   }
 }
 
+//console.log(await getExamStatus("f164ac84ed0eb27c55cb5c6a3001f08a"))
+
 // END OF EXAMS CRUD OPERATIONS
 
 // START OF REGISTRATIONS CRUD OPERATIONS
 
 async function createExamRegistration(registrationInfo) {
   try {
-    const registration = await dbClient.insert(DATABASE.REGISTRATIONS, registrationInfo);
-    return {_id: registration.data.id, ...registrationInfo};
+    const registration = await dbClient.insert(
+      DATABASE.REGISTRATIONS,
+      registrationInfo
+    );
+    return { _id: registration.data.id, ...registrationInfo };
   } catch (error) {
     console.error("Error while creating exam registration\n", error);
   }
@@ -293,32 +414,52 @@ async function createExamRegistration(registrationInfo) {
 
 async function getExamRegistrations(examId, opts = {}) {
   const query = {
-    "selector": {examId},
-    "fields": ["_id", "_rev", "examId", "studentId", "orgId", "orgAdminId", "createdAt"]
-  }
+    selector: { examId },
+    fields: [
+      "_id",
+      "_rev",
+      "examId",
+      "studentId",
+      "orgId",
+      "orgAdminId",
+      "createdAt",
+    ],
+  };
   const registrations = await dbClient.mango(DATABASE.REGISTRATIONS, query);
-  const _registrations = await Promise.all(registrations?.data?.docs?.map(async (registration) => await ({
-    ...registration,
-    studentInfo: await getUserById(registration.studentId, opts),
-    orgAdminInfo: await getUserById(registration.orgAdminId, opts),
-    orgInfo: await getOrganizationById(registration.orgId, opts)
-  })))
+  const _registrations = await Promise.all(
+    registrations?.data?.docs?.map(
+      async (registration) =>
+        await {
+          ...registration,
+          studentInfo: await getUserById(registration.studentId, opts),
+          orgAdminInfo: await getUserById(registration.orgAdminId, opts),
+          orgInfo: await getOrganizationById(registration.orgId, opts),
+        }
+    )
+  );
   return _registrations || [];
 }
 
 async function isUserRegisteredForExam(examId, studentId) {
   const query = {
-    "selector": {examId, studentId},
-    "fields": ["_id"]
-  }
+    selector: { examId, studentId },
+    fields: ["_id"],
+  };
   const registrations = await dbClient.mango(DATABASE.REGISTRATIONS, query);
   return Boolean(registrations?.data?.docs?.length);
 }
 
-async function updateExamById(examInfo) {
+async function updateExamById(examId, _examInfo) {
   try {
-    const exam = await dbClient.update(DATABASE.EXAMS, examInfo);
-    return {_id: exam.data.id, ...examInfo};
+    let examInfo = await getExamById(examId, {
+      includeQbStoreId: true,
+      includeOtherInfo: false,
+    });
+    if (examInfo) {
+      examInfo = { ...examInfo, ..._examInfo };
+      const exam = await dbClient.update(DATABASE.EXAMS, examInfo);
+      return examInfo;
+    }
   } catch (error) {
     console.error("Error while updating exam\n", error);
   }
@@ -327,6 +468,7 @@ async function updateExamById(examInfo) {
 // END OF REGISTRATIONS CRUD OPERATIONS
 
 export default {
+  getCidByExamAndSet,
   getUserById,
   getUserByEmail,
   isValidUser,
@@ -341,10 +483,18 @@ export default {
   getExamById,
   createExamRegistration,
   isUserRegisteredForExam,
-  updateExamById
+  updateExamById,
+  setNftHashToken,
+  getStudentanswer,
+  getNFT,
 };
 
 export {
+  getStudentanswer,
+  setNftHashToken,
+  insertIntoExamresult,
+  getCidByExamAndSet,
+  insertIntoExamset,
   getUserById,
   getUserByEmail,
   isValidUser,
@@ -359,5 +509,6 @@ export {
   getExamById,
   createExamRegistration,
   isUserRegisteredForExam,
-  updateExamById
+  updateExamById,
+  getNFT,
 };
