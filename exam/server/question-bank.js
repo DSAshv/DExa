@@ -32,8 +32,17 @@ export async function setSetPaper(examId) {
   const set1 = shuffledArray.slice(0, midIndex);
   const set2 = shuffledArray.slice(midIndex);
   try {
+    const crypto = require('crypto');
+    function generateHash(jsonString) {
+      return crypto.createHash('sha256').update(jsonString).digest('hex');
+    }
+
     let set1cid = await addStringToIpfs(JSON.stringify(set1));
     let set2cid = await addStringToIpfs(JSON.stringify(set2));
+
+    let set1Hash = generateHash(JSON.stringify(set1));
+    let set2Hash = generateHash(JSON.stringify(set2));
+
     await insertIntoExamset({
       exam_id: examId,
       set_id: 1,
