@@ -7,6 +7,7 @@ import {
 import Papa from "papaparse";
 import { addStringToIpfs, retrieveIpfsFile } from "../../common/server/ipfs.js";
 import { Readable } from "stream";
+import crypto from "crypto";
 
 export async function getQb(examId) {
   const cid = await getQBStoreId(examId);
@@ -21,7 +22,7 @@ export async function getQb(examId) {
 
 export async function getSetPaper(examID) {
   let setId = Math.floor(Math.random() * 2) + 1;
-  let data = await getCidByExamAndSet(examID);
+  let data = await getCidByExamAndSet(examID, setId);
   let setPaperFromIpfs = await getQb(data.cid);
   return { setpaper: setPaperFromIpfs, setId: setId };
 }
@@ -32,9 +33,8 @@ export async function setSetPaper(examId) {
   const set1 = shuffledArray.slice(0, midIndex);
   const set2 = shuffledArray.slice(midIndex);
   try {
-    const crypto = require('crypto');
     function generateHash(jsonString) {
-      return crypto.createHash('sha256').update(jsonString).digest('hex');
+      return crypto.createHash("sha256").update(jsonString).digest("hex");
     }
 
     let set1cid = await addStringToIpfs(JSON.stringify(set1));
@@ -54,16 +54,11 @@ export async function setSetPaper(examId) {
       cid: set2cid,
     });
   } catch (error) {
-    return response.status(200).json({
-      result: API_RESPONSE.FAILURE,
-      data: {
-        message: "Unable to upload set to IPFS",
-      },
-    });
+    console.log("setpaper not setted");
+    throw Error(error);
   }
 }
 export async function setStudentResponse(studentResponse) {
-  // examId, studentId, setid, studentanswer;
   let data = await getCidByExamAndSet(
     studentResponse.examId,
     studentResponse.setid
@@ -85,6 +80,7 @@ export async function setStudentResponse(studentResponse) {
         correct_option: "optionB",
       },
     ],
+    score_id: score,
   });
 }
 function calculateScore(studentResponses, correctOptions) {
@@ -120,15 +116,12 @@ const correctOptions = [
   { question: "Q5", correct_option: "D" },
 ];
 
-// Function to merge data for attended questions only
 function mergeDataForAttendedQuestions(studentResponses, correctOptions) {
-  // Create a map for quick lookup of correct options
   const correctMap = new Map();
   correctOptions.forEach((item) => {
     correctMap.set(item.question, item.correct_option);
   });
 
-  // Merge data into a new array for attended questions only
   const mergedData = studentResponses.map((response) => {
     return {
       question: response.question,
@@ -139,5 +132,3 @@ function mergeDataForAttendedQuestions(studentResponses, correctOptions) {
 
   return mergedData;
 }
-
-// Merging the data and logging it

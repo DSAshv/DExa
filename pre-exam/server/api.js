@@ -14,6 +14,10 @@ import { parse } from "csv-parse";
 import { Readable } from "stream";
 import { addQbToIpfs } from "../../common/server/ipfs.js";
 import pdf from "pdfkit";
+import cron from "node-cron";
+import { setSetPaper } from "../../exam/server/question-bank.js";
+import { deployNFT } from "../../common/transactions/createQPNFT.js";
+import schedule from "node-schedule";
 
 const router = express.Router();
 
@@ -31,8 +35,13 @@ router.post("/logout", (request, response) => {
 
 router.post("/exams", async (request, response) => {
   try {
-    const { mode } = request.body;
+    const { mode, examId } = request.body;
     const userInfo = request.config?.userInfo;
+    const examInfo = await dbClient.getExamById(examId, {
+      userInfo,
+      includeOthers: false,
+    });
+
     if (!request.config?.authorized || !userInfo) {
       return response.status(200).json({
         result: API_RESPONSE.FAILURE,
@@ -41,14 +50,17 @@ router.post("/exams", async (request, response) => {
         },
       });
     }
-
     let query = {};
     if (mode === "get") {
       query = {
-        "selector": {
-          "status": {
-            "$in": [EXAM_STATUS.APPLICATION_OPEN, EXAM_STATUS.EXAM_SCHEDULED, EXAM_STATUS.EXAM_LIVE]
-          }
+        selector: {
+          status: {
+            $in: [
+              EXAM_STATUS.APPLICATION_OPEN,
+              EXAM_STATUS.EXAM_SCHEDULED,
+              EXAM_STATUS.EXAM_LIVE,
+            ],
+          },
         },
       };
       if (userInfo.role === USER_ROLES.ORGADMIN) {
@@ -62,8 +74,136 @@ router.post("/exams", async (request, response) => {
           exams: examList,
         },
       });
+    } else if (mode === "schedule") {
+      if (!examId) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Schedule Exam failed - Exam ID missing",
+          },
+        });
+      }
+      const unixTimestamp = examInfo.startTime;
+      // const startTime = new Date(examInfo.startTime); // Convert timestamp to Date object
+
+      // const jobTime = new Date(startTime.getTime() - 1 * 60 * 1000); // 1 minute later
+      console.log("first");
+      console.log(unixTimestamp);
+
+      const currentTimeInMs = Date.now();
+
+      // Calculate the delay
+      const delay = unixTimestamp - currentTimeInMs;
+      setTimeout(function () {
+        setSetPaper(examInfo._id); // Call function to set the paper
+        console.log("Job executed: here11111");
+      }, delay);
+      const fiveMinutesInMs = examInfo.duration * 60 * 1000;
+      console.log("second");
+      console.log(
+        parseInt(unixTimestamp, 10) +
+          parseInt(fiveMinutesInMs, 10) -
+          currentTimeInMs
+      );
+      let mytime = parseInt(unixTimestamp, 10) + parseInt(fiveMinutesInMs, 10);
+      setTimeout(async function () {
+        try {
+          dbClient.updateExamById(examInfo._id, {
+            status: EXAM_STATUS.EXAM_LIVE,
+          });
+          let cid1 = await dbClient.getCidByExamAndSet(examInfo._id, 1);
+          let cid2 = await dbClient.getCidByExamAndSet(examInfo._id, 2);
+          let hashToken1 = deployNFT(
+            examInfo.name,
+            1,
+            `http://127.0.0.1:8080/ipfs/${cid1.data.docs[0].cid}`,
+            examInfo.description
+          );
+          let hashToken2 = deployNFT(
+            examInfo.name,
+            2,
+            `http://127.0.0.1:8080/ipfs/${cid2.data.docs[0].cid}`,
+            examInfo.description
+          );
+          hashToken1.then(
+            (value) => {
+              dbClient.setNftHashToken({
+                nfttoken: value,
+                exam_id: examInfo._id,
+                set_id: 1,
+              });
+            },
+            (reason) => {
+              console.log(reason);
+            }
+          );
+          hashToken2.then(
+            (value) => {
+              dbClient.setNftHashToken({
+                nfttoken: value,
+                exam_id: examInfo._id,
+                set_id: 2,
+              });
+            },
+            (reason) => {
+              console.log(reason);
+            }
+          );
+          // dbClient.setNftHashToken(examInfo._id, 2, hashToken2);
+          console.log("here111112222");
+        } catch (err) {
+          console.log(err);
+        }
+      }, mytime - Date.now());
+
+      if (!examInfo) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Schedule Exam failed - Exam not found",
+          },
+        });
+      }
+
+      if (examInfo.status === EXAM_STATUS.EXAM_SCHEDULED) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Schedule Exam failed - Exam already scheduled",
+          },
+        });
+      }
+
+      if (examInfo.status !== EXAM_STATUS.APPLICATION_OPEN) {
+        return response.status(200).json({
+          result: API_RESPONSE.FAILURE,
+          data: {
+            message: "Schedule Exam failed - Exam is not open for scheduling",
+          },
+        });
+      }
+
+      const updatedExamInfo = await dbClient.updateExamById(examInfo._id, {
+        status: EXAM_STATUS.EXAM_SCHEDULED,
+      });
+
+      if (updatedExamInfo) {
+        return response.status(200).json({
+          result: API_RESPONSE.SUCCESS,
+          data: {
+            message: "Exam Scheduled Successfully",
+            examInfo: updatedExamInfo,
+          },
+        });
+      }
+
+      return response.status(200).json({
+        result: API_RESPONSE.FAILURE,
+        data: {
+          message: "Schedule Exam failed - Error in scheduling exam",
+        },
+      });
     } else if (mode === "register") {
-      const { examId } = request.body;
       if (!examId) {
         return response.status(200).json({
           result: API_RESPONSE.FAILURE,
@@ -73,7 +213,6 @@ router.post("/exams", async (request, response) => {
         });
       }
 
-      const examInfo = await dbClient.getExamById(examId, { userInfo });
       if (!examInfo) {
         return response.status(200).json({
           result: API_RESPONSE.FAILURE,
@@ -83,19 +222,10 @@ router.post("/exams", async (request, response) => {
         });
       }
 
-      // if (examInfo && mode === "register"){  
-      //   cron.schedule('0 9 * * *', () => {
-      //       //at exam time call method to create qp set
-      //       //at exam end time call deployNFT from createQPFNFT
-      //   });
-      //   //exam start time + duration + 2 mins
-      //   cron.schedule('0 9 * * *', () => {
-      //       //at exam end time call deployNFT from createQPFNFT
-      //       //add returned hash to DB
-      //   });
-      // }
-
-      const isUserRegisteredForExam = await dbClient.isUserRegisteredForExam(examId, userInfo._id);
+      const isUserRegisteredForExam = await dbClient.isUserRegisteredForExam(
+        examId,
+        userInfo._id
+      );
       if (isUserRegisteredForExam) {
         return response.status(200).json({
           result: API_RESPONSE.FAILURE,
@@ -146,8 +276,43 @@ router.post("/exams", async (request, response) => {
           },
         });
       }
+      const targetDate = new Date(examInfo.startTime - 60 * 1000);
+      console.log(targetDate);
 
-      const examInfo = await dbClient.getExamById(examId, { userInfo, includeOthers: false });
+      schedule.scheduleJob(targetDate, () => {
+        console.log("here11111");
+
+        setSetPaper(examInfo._id);
+      });
+      const dateInMilliseconds = examInfo.startTime * 1000;
+      const newDateInMilliseconds =
+        dateInMilliseconds + (examInfo.duration + 2) * 60 * 1000;
+      console.log(newDateInMilliseconds);
+
+      schedule.scheduleJob(
+        Math.floor(newDateInMilliseconds / 1000),
+        async () => {
+          console.log("here111112222");
+
+          let cid1 = dbClient.getCidByExamAndSet(examInfo._id, 1);
+          let cid2 = dbClient.getCidByExamAndSet(examInfo._id, 2);
+          let hashToken1 = await deployNFT(
+            examInfo.name,
+            1,
+            `http://127.0.0.1:8080/ipfs/${cid1}`,
+            examInfo.description
+          );
+          let hashToken2 = await deployNFT(
+            examInfo.name,
+            2,
+            `http://127.0.0.1:8080/ipfs/${cid2}`,
+            examInfo.description
+          );
+          dbClient.setNftHashToken(examInfo._id, 1, hashToken1);
+          dbClient.setNftHashToken(examInfo._id, 2, hashToken2);
+        }
+      );
+
       if (!examInfo) {
         return response.status(200).json({
           result: API_RESPONSE.FAILURE,
@@ -225,12 +390,16 @@ router.post("/exams", async (request, response) => {
         });
       }
 
-      const registrationInfo = await dbClient.isUserRegisteredForExam(examId, userInfo._id);
+      const registrationInfo = await dbClient.isUserRegisteredForExam(
+        examId,
+        userInfo._id
+      );
       if (!registrationInfo) {
         return response.status(200).json({
           result: API_RESPONSE.FAILURE,
           data: {
-            message: "Download Hall Ticket failed - User not registered for exam",
+            message:
+              "Download Hall Ticket failed - User not registered for exam",
           },
         });
       }
@@ -238,18 +407,18 @@ router.post("/exams", async (request, response) => {
       // Generate PDF
       const doc = new pdf();
       let buffers = [];
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', () => {
+      doc.on("data", buffers.push.bind(buffers));
+      doc.on("end", () => {
         let pdfData = Buffer.concat(buffers);
         response.set({
-          'Content-Length': Buffer.byteLength(pdfData),
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': 'attachment; filename=hall_ticket.pdf',
-      });
+          "Content-Length": Buffer.byteLength(pdfData),
+          "Content-Type": "application/pdf",
+          "Content-Disposition": "attachment; filename=hall_ticket.pdf",
+        });
         response.send(pdfData);
       });
 
-      doc.fontSize(20).text('Hall Ticket', { align: 'center' });
+      doc.fontSize(20).text("Hall Ticket", { align: "center" });
       doc.moveDown();
       doc.fontSize(14).text(`Exam Name: ${examInfo.name}`);
       doc.text(`Description: ${examInfo.description}`);
@@ -372,20 +541,20 @@ router.post("/createexam", async (request, response) => {
           },
         });
       }
-      const correctOption = row.correctOption;
-      if (
-        ![row.optionA, row.optionB, row.optionC, row.optionD].includes(
-          correctOption
-        )
-      ) {
-        return response.status(200).json({
-          result: API_RESPONSE.FAILURE,
-          data: {
-            message:
-              "Create Exam failed - Invalid correct option in question bank",
-          },
-        });
-      }
+      // const correctOption = row.correctOption;
+      // if (
+      //   ![row.optionA, row.optionB, row.optionC, row.optionD].includes(
+      //     correctOption
+      //   )
+      // ) {
+      //   return response.status(200).json({
+      //     result: API_RESPONSE.FAILURE,
+      //     data: {
+      //       message:
+      //         "Create Exam failed - Invalid correct option in question bank",
+      //     },
+      //   });
+      // }
     }
 
     let qbStoreId;

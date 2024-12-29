@@ -4,7 +4,8 @@ const DATABASE = {
   EXAMS: "exams",
   EXAM_SET: "examset",
   EXAM_RESULT: "exam_result",
-   REGISTRATIONS: "registrations",
+  REGISTRATIONS: "registrations",
+  NFT_TOKEN: "nfttoken",
 };
 
 const DATABASE_LIST = Object.values(DATABASE);
