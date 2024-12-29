@@ -285,7 +285,7 @@ async function getExamStatus(examID, opts = {}) {
     }
 
     const currentTime = Date.now();
-    const examStartTime = parseInt(exam.startTime, 10) * 1000; // Convert to milliseconds
+    const examStartTime = Number(exam.startTime); // Convert to milliseconds
 
     if (currentTime < examStartTime) {
       const date = new Date(examStartTime);
@@ -306,7 +306,7 @@ async function getExamStatus(examID, opts = {}) {
       };
     } else if (
       currentTime >
-      examStartTime + exam.duration * 60 * 1000
+      examStartTime + (exam.duration * 60 * 1000)
     ) {
       return { mode: EXAM_STATUS.EXAM_ENDED, message: "Exam has ended." };
     } else {

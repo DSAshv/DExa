@@ -25,6 +25,14 @@ class ConfigHolder {
     return config.userInfo?.name || "";
   }
 
+  static get examId() {
+    return config.examId || "";
+  }
+
+  static get examInfo() {
+    return config.examInfo || {};
+  }
+
   static get role() {
     return config.userInfo?.role || "";
   }

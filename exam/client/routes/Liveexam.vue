@@ -1,151 +1,176 @@
-<template>
-  <div class="d-flex flex-column min-vh-100 bg-light">
-    <!-- Alert -->
-    <div v-if="showAlert" 
-         class="position-fixed top-0 start-50 translate-middle-x alert alert-danger text-center shadow-lg z-3">
-      {{ alertMessage }}
-    </div>
+<script setup>
+  import { onMounted, ref } from 'vue';
+  import { useStore } from '../store';
 
-    <!-- Stats Modal -->
-    <div v-if="showStats" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center z-3">
-      <div class="bg-white p-4 rounded shadow-lg">
-        <h2 class="h4 fw-bold mb-3">Exam Statistics</h2>
-        <div class="mb-3">
-          <p>Total Questions: <span class="fw-semibold">{{ calculateStats().total }}</span></p>
-          <p>Answered: <span class="fw-semibold">{{ calculateStats().answered }}</span></p>
-          <p>Marked for Review: <span class="fw-semibold">{{ calculateStats().marked }}</span></p>
-          <p>Not Visited: <span class="fw-semibold">{{ calculateStats().notVisited }}</span></p>
-          <p>Unanswered: <span class="fw-semibold">{{ calculateStats().unanswered }}</span></p>
-        </div>
-        <button 
-          @click="showStats = false"
-          class="btn btn-primary w-100">Finish</button>
-      </div>
-    </div>
+const store = useStore();
+const currentQuestion = ref(0);
+const selectedOption = ref(null);
+  
+  const handlePrevious = () => {
+    if (selectedOption.value) {
+      const response = store.progress.find(
+        (item) => item.question === store.questions[currentQuestion.value].question
+      );
+      if (response) {
+        response.option_selected = selectedOption.value;
+      } else {
+        progress.value.push({
+          question: store.questions[currentQuestion.value].question,
+          option_selected: selectedOption.value,
+        });
+      }
+    }
+    if (currentQuestion.value > 0) {
+      currentQuestion.value--;
+      selectedOption.value = null;
+    }
+  };
 
-    <!-- Header Section -->
-    <div class="bg-white shadow-sm py-3 px-4">
-      <div class="row">
-        <div class="col">
-          <p><strong>Student Name:</strong> {{ examMetadata.studentName }}</p>
-          <p><strong>Subject:</strong> {{ examMetadata.subjectName }}</p>
-        </div>
-        <div class="col text-end">
-          <p><strong>Exam Name:</strong> {{ examMetadata.examName }}</p>
-          <p><strong>Time Remaining:</strong> {{ formatTime(remainingTime) }}</p>
-        </div>
-      </div>
-    </div>
+const handleNext = () => {
+    if (selectedOption.value) {
+      const response = store.progress.find(
+        (item) => item.question === store.questions[currentQuestion.value].question
+      );
+      if (response) {
+        response.option_selected = selectedOption.value;
+      } else {
+        progress.value.push({
+          question: store.questions[currentQuestion.value].question,
+          option_selected: selectedOption.value,
+        });
+      }
+    }
+    if (currentQuestion.value < store.questions.length - 1) {
+      currentQuestion.value++;
+      selectedOption.value = null;
+    }
+  }
 
-    <!-- Main Content -->
-    <div class="d-flex flex-fill px-4 py-3">
-      <!-- Question Section -->
-      <div class="flex-fill bg-white rounded shadow-sm p-4 d-flex flex-column">
-        <div v-if="currentQuestion" class="mb-4">
-          <h2 class="h5 fw-bold">Question {{ currentQuestionIndex + 1 }}</h2>
-          <p>{{ currentQuestion.question }}</p>
+  const clear = () => {
+    selectedOption.value = null;
+  };
 
-          <!-- Options -->
-          <div>
-            <div v-for="option in ['A', 'B', 'C', 'D']" :key="option" class="form-check mb-2">
-              <input 
-                type="radio" 
-                :id="'option' + option" 
-                :name="'question' + currentQuestionIndex"
-                :value="option" 
-                v-model="selectedAnswers[currentQuestionIndex]"
-                class="form-check-input">
-              <label :for="'option' + option" class="form-check-label">
-                {{ currentQuestion['option' + option] }}
-              </label>
-            </div>
-          </div>
-        </div>
+  const saveAndMarkForReview = () => {
+    // Logic to save the answer and mark for review
+    if (selectedOption.value) {
+      progress.value[currentQuestion.value].status = 'Marked for Review';
+    }
+  };
 
-        <!-- Navigation Buttons -->
-        <div class="mt-auto">
-          <div class="d-flex justify-content-between">
-            <button @click="previousQuestion" 
-                    :disabled="currentQuestionIndex === 0"
-                    class="btn btn-secondary">Back</button>
+  const markForReviewAndNext = () => {
+    // Logic to mark for review and go to the next question
+    if (currentQuestion.value < store.questions.value.length - 1) {
+      currentQuestion.value++;
+      selectedOption.value = null;
+    }
+  };
 
-            <div class="d-flex gap-2">
-              <button @click="saveAnswer('answered')" 
-                      class="btn btn-success">Save & Next</button>
-              <button @click="clearAnswer" 
-                      class="btn btn-danger">Clear</button>
-              <button @click="saveAnswer('marked')" 
-                      class="btn btn-warning">Mark for Review</button>
-              <button @click="saveAnswer('marked-answered')" 
-                      class="btn btn-info">Save & Mark for Review</button>
-            </div>
+  const goToPreviousQuestion = () => {
+    if (currentQuestion.value > 0) {
+      currentQuestion.value--;
+      selectedOption.value = null;
+    }
+  };
 
-            <button @click="nextQuestion" 
-                    :disabled="currentQuestionIndex === questions.length - 1"
-                    class="btn btn-secondary">Next</button>
-          </div>
-
-          <!-- Finish Button -->
-          <div class="text-center mt-4" v-if="currentQuestionIndex === questions.length - 1">
-            <button @click="finishExam" class="btn btn-purple text-white px-4">Finish Exam</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Question Panel -->
-      <div class="ms-4 w-25 bg-white rounded shadow-sm p-4">
-        <h3 class="h6 fw-bold mb-3">Question Panel</h3>
-        <div class="d-flex flex-wrap gap-2">
-          <button v-for="(_, index) in questions" 
-                  :key="index"
-                  @click="goToQuestion(index)"
-                  :class="[
-                    'btn btn-sm',
-                    questionStatus[index] ? statusColors[questionStatus[index]] : 'btn-outline-secondary'
-                  ]">
-            {{ index + 1 }}
-          </button>
-        </div>
-
-        <!-- Legend -->
-        <div class="mt-4">
-          <h4 class="h6">Legend:</h4>
-          <div v-for="(color, status) in statusColors" :key="status" class="d-flex align-items-center gap-2">
-            <span :class="['badge', color]"></span>
-            <span class="text-capitalize">{{ status.replace('-', ' ') }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script>
-export default {
-  // Your existing Vue.js script code remains unchanged
-};
+onMounted(() => {
+  store.questions = [
+        { text: 'What is the integral of x?', options: ['x^2/2 + C', 'x^2 + C', '2x + C', 'x + C'] },
+        { text: 'What is the derivative of x^2?', options: ['2x', 'x', 'x^2', '2'] },
+        { text: 'What is the limit of (1/x) as x approaches infinity?', options: ['0', '1', 'Infinity', 'Undefined'] }
+    ]
+});
 </script>
 
+
+<template>
+  <main class="flex-grow-1 overflow-auto">
+  <div class="p-2 h-100">
+    <div class="d-flex gap-2 h-100">
+      <div class="flex-grow-1 h-100">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column h-100">
+            <div class="flex-grow-1">
+              <div class="question">
+                <p>Question {{ currentQuestion + 1 }}:</p>
+                <p>{{ store.questions[currentQuestion]?.text }}</p>
+              </div>
+              <div class="options">
+                <div
+                  v-for="(option, index) in store.questions[currentQuestion]?.options"
+                  :key="index"
+                  class="option"
+                >
+                  <input
+                    type="radio"
+                    :value="option"
+                    v-model="selectedOption"
+                  />
+                  <label :for="option">{{ option }}</label>
+                </div>
+              </div>
+            </div>
+            <div class="buttons d-flex justify-content-between gap-2">
+              <div class="d-flex gap-2">
+                <button class="btn btn-primary" :disabled="currentQuestion === 0" @click="handlePrevious">
+                  Previous
+                </button>
+                <button class="btn btn-primary" :disabled="currentQuestion === store.questions.length - 1" @click="handleNext">
+                  Next
+                </button>
+              </div>
+              <div class="d-flex gap-2">
+                <button
+                  class="btn btn-primary"
+                  @click="markForReviewAndNext"
+                >
+                  Mark for Review & Next
+                </button>
+                <button class="btn btn-secondary" @click="clear">
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div> 
+        </div>
+        </div>
+        <div class="h-100">
+          <div class="card h-100 side-card">
+            <h3 class="text-lg font-semibold mb-4">Question Panel</h3>
+            <div class="grid grid-cols-5 gap-2">
+              <button v-for="(_, index) in store.questions" 
+                :key="index"
+                @click="goToQuestion(index)"
+                class="btn btn-outlined"
+                :class="[
+                  'w-10 h-10 rounded-lg text-center',
+                  store.progress.find(item => item.question === store.questions[currentQuestion].question)?.option_selected ? 
+                    'bg-green-500 text-white' : 
+                    'bg-gray-300'
+                ]"
+              >
+                {{ index + 1 }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  </template>
+
 <style scoped>
-/******** Bootstrap Status Colors ********/
-.answered {
-  background-color: #28a745;
-  color: white;
-}
-.marked {
-  background-color: #ffc107;
-  color: white;
-}
-.marked-answered {
-  background-color: #17a2b8;
-  color: white;
-}
-.not-visited {
-  background-color: #6c757d;
-  color: white;
-}
-.unanswered {
-  background-color: #dc3545;
-  color: white;
-}
+  .container {
+    margin-top: 20px;
+  }
+  .user-info {
+    font-size: 14px;
+  }
+  .option {
+    margin-bottom: 10px;
+  }
+  .sidebar {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+  }
 </style>

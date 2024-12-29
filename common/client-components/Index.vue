@@ -9,7 +9,10 @@ const props = defineProps({
 });
 let redirectPath = ConfigHolder.isAuthorized ? "/dashboard" : "/register";
 if (props.portalText === "Exam Portal") {
-    redirectPath = ConfigHolder.isAuthorized ? "/attendance" : "/register";
+    redirectPath = ConfigHolder.isAuthorized ? `/exam/${ConfigHolder.examId}/attendance` : "/register";
+    if (ConfigHolder.isStudent) {
+        redirectPath = ConfigHolder.isAuthorized ? `/exam/${ConfigHolder.examId}/general` : "/register";
+    }
 }
 </script>
 

@@ -65,10 +65,13 @@ app.get("/setExampaper", async (req, res) => {
   await setSetPaper(examid);
 });
 
-app.get("/exam/:examId", async (req, res) => {
+app.get("/exam/:examId/*", async (req, res) => {
   const examId = req.params.examId;
-  try {
+  try { 
     const { mode, message } = await dbClient.getExamStatus(examId);
+    const examInfo = await dbClient.getExamById(examId, { userInfo: req.config.userInfo });
+    req.config.examInfo = examInfo;
+    req.config.examId = examId;
     req.config.mode = mode;
     req.config.message = message;
     res.render("index", { config: req.config });

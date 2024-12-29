@@ -13,7 +13,7 @@ const ROLES_TABS_MAP = {
     ["exam"]: {
         ["student"]: [
             { id: "general", name: "General" },
-            { id: "exam", name: "Exam" },
+            { id: "liveexam", name: "Exam" },
             { id: "submit", name: "Submit" },
         ],
         ["orgAdmin"]: [

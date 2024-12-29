@@ -59,14 +59,17 @@ function handleLogout() {
                 </button>
             </nav>
         </section>
-        <section>
+        <section class="d-flex align-items-center gap-2">
+            <a v-if="ConfigHolder.isOrgAdmin" target="_blank" href="https://explorer.aptoslabs.com/account/0x12a192bd7144d1bb246a39a82e3ce7c757760ecd335b0248f25f40ac54571ffb/transactions?network=devnet">
+                <i class="bi text-white bi-wallet2"></i> 
+            </a>
             <button
                 class="btn text-white fs-3 p-0"
                 data-bs-toggle="offcanvas"
                 data-bs-target="#account-canvas"
                 aria-controls="offcanvasRight"
             >
-                <i class="bi bi-person-circle" />
+                <i class="bi text-white bi-person-circle" />
             </button>
         </section>
         <div
