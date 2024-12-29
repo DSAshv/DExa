@@ -14,6 +14,7 @@ import { parse } from "csv-parse";
 import { Readable } from "stream";
 import { addQbToIpfs } from "../../common/server/ipfs.js";
 import pdf from "pdfkit";
+import { corn } from "node-cron";
 
 const router = express.Router();
 
@@ -80,6 +81,18 @@ router.post("/exams", async (request, response) => {
           data: {
             message: "Register Exam failed - Exam not found",
           },
+        });
+      }
+
+      if (examInfo && mode === "register"){
+        cron.schedule('0 9 * * *', () => {
+            //at exam time call method to create qp set
+            //at exam end time call deployNFT from createQPFNFT
+        });
+        //exam start time + duration + 2 mins
+        cron.schedule('0 9 * * *', () => {
+            //at exam end time call deployNFT from createQPFNFT
+            //add returned hash to DB
         });
       }
 
